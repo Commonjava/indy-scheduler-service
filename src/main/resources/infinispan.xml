@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<infinispan xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xsi:schemaLocation="urn:infinispan:config:11.0 http://www.infinispan.org/schemas/infinispan-config-11.0.xsd
+                                urn:infinispan:config:store:jdbc:11.0 http://www.infinispan.org/schemas/infinispan-cachestore-jdbc-config-11.0.xsd"
+            xmlns="urn:infinispan:config:11.0"
+            xmlns:jdbc="urn:infinispan:config:store:jdbc:11.0">
+
+  <cache-container default-cache="local" name="IndyCacheManager" shutdown-hook="DEFAULT" statistics="true">
+    <local-cache-configuration name="local-template" statistics="true">
+      <!--
+          Limits the cache to this by the amount of entries in the cache.
+          If choose memory or off-heap, make sure the key/value objects implements Serializable
+      -->
+      <memory max-count="200000" when-full="REMOVE"/>
+    </local-cache-configuration>
+
+    <local-cache name="local" configuration="local-template"/>
+
+
+    <local-cache name="store-data-v2" configuration="local-template">
+      <persistence passivation="true">
+        <file-store shared="false" preload="true" fetch-state="false" path="/tmp/store-v2"/>
+      </persistence>
+    </local-cache>
+
+    <local-cache name="store-by-package" configuration="local-template">
+      <memory max-count="100"/>
+    </local-cache>
+
+    <local-cache name="affected-by-stores" configuration="local-template">
+      <memory max-count="999999" when-full="NONE">
+      </memory>
+    </local-cache>
+
+
+  </cache-container>
+</infinispan>

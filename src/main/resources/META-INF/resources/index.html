@@ -1,0 +1,63 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>Indy Scheduler Service</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/wingcss/0.1.8/wing.min.css"/>
+    <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular.min.js"></script>
+    <script type="text/javascript">
+      var app = angular.module("IndyScheduler", []);
+
+      //Controller Part
+      app.controller("IndySchedulerController", function ($scope, $http) {
+        //Initialize page with default data
+        $scope.stats = {};
+
+        //Now load the data from server
+        _refreshPageData();
+
+        function _refreshPageData() {
+          $http({
+            method: 'GET',
+            url: '/api/stats/version-info'
+          }).then(function successCallback(response) {
+            $scope.stats = response.data;
+          }, function errorCallback(response) {
+            console.log(response.statusText);
+          });
+        }
+      });
+    </script>
+</head>
+<body ng-app="IndyScheduler" ng-controller="IndySchedulerController">
+
+<div class="container">
+    <h1>Indy Scheduler Service</h1>
+    <hr/>
+
+
+    <div class="cards">
+        <div class="card">
+            <h5 class="card-header">About</h5>
+            <p class="card-body"><b>Indy Scheduler Service</b>.</p>
+        </div>
+
+        <div class="card">
+            <h5 class="card-header">About APIs</h5>
+            <p class="card-body">Check <a href="/swagger-ui">swagger-ui</a> for APIs of the service</p>
+        </div>
+
+
+    </div>
+
+    <div style="position: fixed; bottom: 5%; text-align: center;">
+        <a target="_new" href="https://github.com/Commonjava/indy-scheduler-service">Github Project</a></span> |
+        Version: {{ stats.version }} |
+        Commit ID: <a target="_new" href="http://github.com/Commonjava/indy-scheduler-service/commit/{{stats['commit-id']}}">{{ stats["commit-id"] }}</a> |
+        Built on {{ stats["timestamp"] }} by {{ stats["builder"] }}
+    </div>
+
+</div>
+
+</body>
+</html>

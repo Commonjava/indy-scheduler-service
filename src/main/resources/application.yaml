@@ -1,0 +1,162 @@
+quarkus:
+  http:
+    port: 8080
+    read-timeout: 30m
+    limits:
+      max-body-size: 500M
+
+  package:
+    uber-jar: true
+
+  # Logging (disable console on prod)
+  log:
+    level: INFO
+    min-level: TRACE
+    category:
+      "org.jboss":
+        level: WARN
+      "org.apache.kafka":
+        level: WARN
+      "io.quarkus":
+        level: WARN
+      "io.smallrye":
+        level: WARN
+      "org.eclipse":
+        level: WARN
+      "io.netty":
+        level: WARN
+      "org.infinispan":
+        level: WARN
+      "io.agroal":
+        level: WARN
+      "org.commonjava.indy.service":
+        level: TRACE
+    console:
+      enable: true
+    file:
+      level: INFO
+      enable: true
+      path: "log/indy-scheduler-service.log"
+      format: "%d{HH:mm:ss} %-5p [%c{2.}] (%t) %s%e%n"
+      rotation:
+        max-backup-index: 5
+        max-file-size: 10M
+
+  swagger-ui:
+    always-include: true
+
+kafka:
+  bootstrap:
+    servers: "localhost:9092"
+
+mp:
+  messaging:
+    emitter:
+      # the default buffer size for emitter's OnOverflow buffer strategy of back-pressure control
+      default-buffer-size: 1024
+    outgoing:
+      store-event:
+        connector: "smallrye-kafka"
+        topics: "scheduler-event"
+        value:
+          serializer: "io.quarkus.kafka.client.serialization.ObjectMapperSerializer"
+
+scheduler:
+  data-storage: cassandra
+
+
+
+#keycloak:
+#  enabled: false
+
+
+cassandra:
+  enabled: true
+  host: localhost
+  port: 9042
+  user: cassandra
+  pass: cassandra
+  keyspace: indyscheduler
+  keyspaceReplicas: 3
+  replicaFactor: 3
+
+
+
+
+
+"%dev":
+   quarkus:
+#     kubernetes-config:
+#       enabled: false
+     log:
+       level: TRACE
+       min-level: TRACE
+       category:
+         "org.jboss":
+           level: INFO
+         "org.apache.kafka":
+           level: ERROR
+         "io.quarkus":
+           level: INFO
+         "io.smallrye":
+           level: INFO
+         "org.eclipse":
+           level: INFO
+         "io.netty":
+           level: INFO
+         "org.infinispan":
+           level: INFO
+         "io.agroal":
+           level: INFO
+         "org.commonjava.indy.service":
+           level: TRACE
+       console:
+         enable: true
+       file:
+         enable: true
+         path: "/tmp/indy-scheduler-service.log"
+         format: "%d{HH:mm:ss} %-5p [%c{2.}] (%t) %s%e%n"
+         rotation:
+           max-backup-index: 5
+           max-file-size: 10M
+
+   repository:
+     data-storage: infinispan
+
+   ispn:
+     configDir: /tmp/infinispan.xml
+#     repo-data-pool: |
+#       dataSource.providerClassName=org.postgresql.ds.PGSimpleDataSource,\
+#       dataSource.jdbcUrl=jdbc:postgresql://localhost:5432/test,\
+#       dataSource.principal=db_user,\
+#       dataSource.credential=mySpecialPassword,\
+#       dataSource.minSize=10,\
+#       dataSource.initialSize=10,\
+#       dataSource.maxSize=100,\
+#       dataSource.reapTimeout_m=10,\
+#       dataSource.maxLifetime_m=28,\
+#       dataSource.leakTimeout_s=5,\
+#       metrics=true,\
+#       healthChecks=true
+
+   cassandra:
+     enabled: false
+     host: localhost
+     port: 9042
+     user: user
+     pass: pass
+#    keyspace:
+#    replicaFactor:
+#    keyspaceReplicas:
+#    timeoutMillis:
+#        connect: 60000
+#        read: 60000
+#    retries:
+#        read: 3
+#        write: 3
+
+
+
+
+
+
