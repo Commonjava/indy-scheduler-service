@@ -760,6 +760,6 @@ public class ISPNScheduleManager
 
     private Boolean isEnabled()
     {
-        return schedulerConfig.isEnabled();
+        return schedulerConfig.isCassandraEnabled();
     }
 }

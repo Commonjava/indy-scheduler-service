@@ -7,7 +7,7 @@ import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.mapping.Mapper;
 import com.datastax.driver.mapping.MappingManager;
-import org.commonjava.indy.service.scheduler.config.ScheduleConfiguration;
+import org.commonjava.indy.service.scheduler.config.CassandraConfiguration;
 import org.commonjava.indy.service.scheduler.data.cache.CacheProducer;
 import org.commonjava.indy.service.scheduler.event.ScheduleTriggerEvent;
 import org.commonjava.indy.service.scheduler.model.cassandra.DtxExpiration;
@@ -39,7 +39,7 @@ public class ScheduleDB
     CassandraClient client;
 
     @Inject
-    ScheduleConfiguration scheduleConfig;
+    CassandraConfiguration cassandraConfig;
 
     @Inject
     private CacheProducer cacheProducer;
@@ -73,9 +73,8 @@ public class ScheduleDB
     {
     }
 
-    public ScheduleDB( ScheduleConfiguration config, CassandraClient client, CacheProducer cacheProducer )
+    public ScheduleDB( CassandraClient client, CacheProducer cacheProducer )
     {
-        this.scheduleConfig = config;
         this.client = client;
         this.cacheProducer = cacheProducer;
         init();
@@ -85,11 +84,11 @@ public class ScheduleDB
     public void init()
     {
 
-        String keyspace = scheduleConfig.getScheduleKeyspace();
+        String keyspace = cassandraConfig.getScheduleKeyspace();
 
         session = client.getSession( keyspace );
 
-        session.execute( SchemaUtils.getSchemaCreateKeyspace( keyspace, indyConfig.getKeyspaceReplicas() ) );
+        session.execute( SchemaUtils.getSchemaCreateKeyspace( keyspace, cassandraConfig.getReplicationFactor() ) );
         session.execute( ScheduleDBUtil.getSchemaCreateTableSchedule( keyspace ) );
         session.execute( ScheduleDBUtil.getSchemaCreateTypeIndex4Schedule( keyspace ) );
         session.execute( ScheduleDBUtil.getSchemaCreateTableExpiration( keyspace ) );
@@ -158,13 +157,13 @@ public class ScheduleDB
             }
             // When the hour shift, the service need to check the remaining jobs expired in the last minutes of the last hour.
             LocalDateTime localDateTime = LocalDateTime.now();
-            if ( localDateTime.getMinute() <= scheduleConfig.getScheduleRatePeriod() / 60 )
+            if ( localDateTime.getMinute() <= cassandraConfig.getScheduleRatePeriod() / 60 )
             {
-                LocalDateTime offsetDateTime = localDateTime.minusHours( scheduleConfig.getOffsetHours() );
+                LocalDateTime offsetDateTime = localDateTime.minusHours( cassandraConfig.getOffsetHours() );
                 queryAndSetExpiredSchedule( Date.from( offsetDateTime.atZone( ZoneId.systemDefault() ).toInstant() ) );
             }
             queryAndSetExpiredSchedule( Date.from( localDateTime.atZone( ZoneId.systemDefault() ).toInstant() ) );
-        }, 10, scheduleConfig.getScheduleRatePeriod(), TimeUnit.SECONDS );
+        }, 10, cassandraConfig.getScheduleRatePeriod(), TimeUnit.SECONDS );
 
     }
 
@@ -188,7 +187,7 @@ public class ScheduleDB
 
     private Long calculateExpirationPID( Date date )
     {
-        return date.getTime() / scheduleConfig.getPartitionKeyRange();
+        return date.getTime() / cassandraConfig.getPartitionKeyRange();
     }
 
     private Date calculateExpirationTime( Date scheduleTime, Long timeout )

@@ -76,6 +76,22 @@ public class CassandraConfiguration
     @ConfigProperty( name = "cassandra.keyspaceReplicas", defaultValue = "0" )
     int keyspaceReplicas;
 
+    @Inject
+    @ConfigProperty( name = "cassandra.keyspace" )
+    Optional<String> scheduleKeyspace;
+
+    @Inject
+    @ConfigProperty( name = "cassandra.partition.range", defaultValue = "0L" )
+    long partitionKeyRange;
+
+    @Inject
+    @ConfigProperty( name = "cassandra.rate.period", defaultValue = "0L" )
+    long scheduleRatePeriod;
+
+    @Inject
+    @ConfigProperty( name = "cassandra.hours.offset", defaultValue = "0" )
+    int offsetHours;
+
     public CassandraConfiguration()
     {
     }
@@ -198,5 +214,45 @@ public class CassandraConfiguration
     public void setKeyspaceReplicas( int keyspaceReplicas )
     {
         this.keyspaceReplicas = keyspaceReplicas;
+    }
+
+    public String getScheduleKeyspace()
+    {
+        return scheduleKeyspace.orElse( "" );
+    }
+
+    public void setScheduleKeyspace( String scheduleKeyspace )
+    {
+        this.scheduleKeyspace = Optional.of( scheduleKeyspace );
+    }
+
+    public long getPartitionKeyRange()
+    {
+        return partitionKeyRange;
+    }
+
+    public void setPartitionKeyRange( long partitionKeyRange )
+    {
+        this.partitionKeyRange = partitionKeyRange;
+    }
+
+    public long getScheduleRatePeriod()
+    {
+        return scheduleRatePeriod;
+    }
+
+    public void setScheduleRatePeriod( long scheduleRatePeriod )
+    {
+        this.scheduleRatePeriod = scheduleRatePeriod;
+    }
+
+    public int getOffsetHours()
+    {
+        return offsetHours;
+    }
+
+    public void setOffsetHours( int offsetHours )
+    {
+        this.offsetHours = offsetHours;
     }
 }

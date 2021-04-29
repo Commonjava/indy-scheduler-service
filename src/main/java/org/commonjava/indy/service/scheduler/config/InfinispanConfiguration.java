@@ -15,23 +15,35 @@
  */
 package org.commonjava.indy.service.scheduler.config;
 
-import java.io.File;
-import java.util.Optional;
-import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
-
 import io.quarkus.runtime.Startup;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
-import static org.apache.commons.lang3.StringUtils.*;
+import javax.enterprise.context.ApplicationScoped;
+import javax.inject.Inject;
+import java.io.File;
+import java.util.Optional;
+
+import static org.apache.commons.lang3.StringUtils.isEmpty;
 
 @Startup
 @ApplicationScoped
 public class InfinispanConfiguration
 {
+    private static final String DEFAULT_REMOTE_SERVER = "localhost";
+
+    private static final Boolean DEFAULT_ENABLED = Boolean.FALSE;
+
     @Inject
     @ConfigProperty( name = "ispn.configDir" )
     Optional<String> infinispanConfigDir;
+
+    @Inject
+    @ConfigProperty( name = "ispn.remote.enabled", defaultValue = "false" )
+    Boolean remoteEnabled;
+
+    @Inject
+    @ConfigProperty( name = "ispn.remote.hotrod.client.config" )
+    Optional<String> hotrodClientConfigPath;
 
     public File getInfinispanConfigDir()
     {
@@ -42,5 +54,15 @@ public class InfinispanConfiguration
     public void setInfinispanConfigDir( String infinispanConfigDir )
     {
         this.infinispanConfigDir = Optional.of( infinispanConfigDir );
+    }
+
+    public String getHotrodClientConfigPath()
+    {
+        return hotrodClientConfigPath.orElse( "" );
+    }
+
+    public void setHotrodClientConfigPath( String hotrodClientConfigPath )
+    {
+        this.hotrodClientConfigPath = Optional.of( hotrodClientConfigPath );
     }
 }

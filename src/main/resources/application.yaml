@@ -45,6 +45,10 @@ quarkus:
   swagger-ui:
     always-include: true
 
+scheduler:
+  data-storage: cassandra
+
+
 kafka:
   bootstrap:
     servers: "localhost:9092"
@@ -61,24 +65,23 @@ mp:
         value:
           serializer: "io.quarkus.kafka.client.serialization.ObjectMapperSerializer"
 
-scheduler:
-  data-storage: cassandra
-
-
-
 #keycloak:
 #  enabled: false
 
 
 cassandra:
-  enabled: true
   host: localhost
   port: 9042
   user: cassandra
   pass: cassandra
-  keyspace: indyscheduler
   keyspaceReplicas: 3
   replicaFactor: 3
+  partition:
+    range: 0
+  rate:
+    period: 0
+  hours:
+    offset: 0
 
 
 

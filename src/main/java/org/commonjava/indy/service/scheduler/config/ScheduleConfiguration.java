@@ -40,29 +40,7 @@ public class ScheduleConfiguration
     @ConfigProperty( name = "schedule.data-storage" )
     Optional<String> storageType;
 
-    @Inject
-    @ConfigProperty( name = "schedule.cassandra.keyspace" )
-    Optional<String> scheduleKeyspace;
 
-    @Inject
-    @ConfigProperty( name = "schedule.cassandra.keyspace" )
-    int replicationFactor;
-
-    @Inject
-    @ConfigProperty( name = "schedule.cassandra.partition.range", defaultValue = "0L" )
-    long partitionKeyRange;
-
-    @Inject
-    @ConfigProperty( name = "schedule.cassandra.rate.period", defaultValue = "0L" )
-    long scheduleRatePeriod;
-
-    @Inject
-    @ConfigProperty( name = "schedule.cassandra.hours.offset", defaultValue = "0" )
-    int offsetHours;
-
-    @Inject
-    @ConfigProperty( name = "schedule.cassandra.enabled", defaultValue = "false" )
-    Boolean enabled;
 
     public int getClusterLockExpiration()
     {
@@ -84,64 +62,6 @@ public class ScheduleConfiguration
         this.storageType = Optional.of( storageType );
     }
 
-    public boolean isEnabled()
-    {
-        return enabled;
-    }
 
-    public void setEnabled( Boolean enabled )
-    {
-        this.enabled = enabled;
-    }
-
-    public String getScheduleKeyspace()
-    {
-        return scheduleKeyspace.orElse( "" );
-    }
-
-    public void setScheduleKeyspace( String scheduleKeyspace )
-    {
-        this.scheduleKeyspace = Optional.of( scheduleKeyspace );
-    }
-
-    public int getReplicationFactor()
-    {
-        return replicationFactor;
-    }
-
-    public void setReplicationFactor( int replicationFactor )
-    {
-        this.replicationFactor = replicationFactor;
-    }
-
-    public long getPartitionKeyRange()
-    {
-        return partitionKeyRange;
-    }
-
-    public void setPartitionKeyRange( long partitionKeyRange )
-    {
-        this.partitionKeyRange = partitionKeyRange;
-    }
-
-    public long getScheduleRatePeriod()
-    {
-        return scheduleRatePeriod;
-    }
-
-    public void setScheduleRatePeriod( long scheduleRatePeriod )
-    {
-        this.scheduleRatePeriod = scheduleRatePeriod;
-    }
-
-    public int getOffsetHours()
-    {
-        return offsetHours;
-    }
-
-    public void setOffsetHours( int offsetHours )
-    {
-        this.offsetHours = offsetHours;
-    }
 
 }
