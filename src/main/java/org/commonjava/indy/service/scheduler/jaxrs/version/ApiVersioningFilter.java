@@ -22,26 +22,19 @@ import org.slf4j.LoggerFactory;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
-import javax.servlet.Filter;
-import javax.servlet.FilterChain;
-import javax.servlet.FilterConfig;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.annotation.WebFilter;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletRequestWrapper;
-import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.container.ContainerRequestContext;
+import javax.ws.rs.container.ContainerRequestFilter;
+import javax.ws.rs.container.ContainerResponseContext;
+import javax.ws.rs.container.ContainerResponseFilter;
+import javax.ws.rs.core.MultivaluedMap;
+import javax.ws.rs.ext.Provider;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Enumeration;
 import java.util.List;
 import java.util.Optional;
 
 import static javax.servlet.http.HttpServletResponse.SC_GONE;
 import static javax.ws.rs.core.HttpHeaders.ACCEPT;
-import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.commonjava.indy.service.scheduler.model.version.Versioning.HEADER_INDY_API_VERSION;
 import static org.commonjava.indy.service.scheduler.model.version.Versioning.HEADER_INDY_CUR_API_VERSION;
 import static org.commonjava.indy.service.scheduler.model.version.Versioning.HEADER_INDY_MIN_API_VERSION;
@@ -69,9 +62,9 @@ import static org.commonjava.indy.service.scheduler.model.version.Versioning.HEA
  *  The servlet container respect the priority and choose the right method to use.
  */
 @ApplicationScoped
-@WebFilter( "/api/admin/*" )
+@Provider
 public class ApiVersioningFilter
-        implements Filter
+        implements ContainerRequestFilter, ContainerResponseFilter
 {
 
     private final Logger logger = LoggerFactory.getLogger( getClass() );
@@ -92,28 +85,10 @@ public class ApiVersioningFilter
     }
 
     @Override
-    public void init( final FilterConfig filterConfig )
-            throws ServletException
+    public void filter( ContainerRequestContext requestContext )
+            throws IOException
     {
-    }
-
-    @Override
-    public void doFilter( final ServletRequest request, final ServletResponse response, final FilterChain chain )
-            throws IOException, ServletException
-    {
-        HttpServletRequest httpServletRequest = (HttpServletRequest) request;
-        HttpServletResponse httpServletResponse = (HttpServletResponse) response;
-
-        String reqApiVersion = httpServletRequest.getHeader( HEADER_INDY_API_VERSION );
-
-        // Insert 3 headers into outgoing responses
-        if ( reqApiVersion != null )
-        {
-            httpServletResponse.addHeader( HEADER_INDY_API_VERSION, reqApiVersion );
-        }
-        httpServletResponse.addHeader( HEADER_INDY_CUR_API_VERSION, indyVersioning.getApiVersion() );
-        httpServletResponse.addHeader( HEADER_INDY_MIN_API_VERSION, indyDeprecatedApis.getMinApiVersion() );
-
+        String reqApiVersion = requestContext.getHeaderString( HEADER_INDY_API_VERSION );
         Optional<DeprecatedApis.DeprecatedApiEntry> deprecatedApiEntry =
                 indyDeprecatedApis.getDeprecated( reqApiVersion );
 
@@ -121,94 +96,94 @@ public class ApiVersioningFilter
 
         if ( deprecatedApiEntry.isPresent() )
         {
-            if ( deprecatedApiEntry.get().isOff() )
-            {
-                httpServletResponse.setStatus( SC_GONE ); // Return 410
-                return;
-            }
-            else
+            if ( !deprecatedApiEntry.get().isOff() )
             {
                 deprecatedApiVersion = deprecatedApiEntry.get().getValue();
             }
         }
-
-        VersioningRequest versioningRequest =
-                new VersioningRequest( httpServletRequest, reqApiVersion, deprecatedApiVersion );
-        chain.doFilter( versioningRequest, response );
+        makeRequestVersioned( requestContext, reqApiVersion, deprecatedApiVersion );
     }
 
     @Override
-    public void destroy()
+    public void filter( ContainerRequestContext requestContext, ContainerResponseContext responseContext )
+            throws IOException
     {
+        MultivaluedMap<String, Object> headers = responseContext.getHeaders();
+
+        String reqApiVersion = requestContext.getHeaderString( HEADER_INDY_API_VERSION );
+
+        // Insert 3 headers into outgoing responses
+        if ( reqApiVersion != null )
+        {
+            headers.add( HEADER_INDY_API_VERSION, reqApiVersion );
+        }
+        headers.add( HEADER_INDY_CUR_API_VERSION, indyVersioning.getApiVersion() );
+        headers.add( HEADER_INDY_MIN_API_VERSION, indyDeprecatedApis.getMinApiVersion() );
+
+        Optional<DeprecatedApis.DeprecatedApiEntry> deprecatedApiEntry =
+                indyDeprecatedApis.getDeprecated( reqApiVersion );
+
+        if ( deprecatedApiEntry.isPresent() && deprecatedApiEntry.get().isOff() )
+        {
+            responseContext.setStatus( SC_GONE ); // Return 410
+        }
+
     }
 
+    private final static String APPLICATION = "application";
+
     /**
-     * This class is used to adjust 'Accept' header. HttpServletRequest objects are read-only. We extend the
-     * functionality by employing a decorator pattern and add mutability in the extended class.
+     * This method is used to adjust
      *
      * If the user requests with header 'Indy-API-Version', we will insert "application/indy-v[X]+json"
      * to accept values where X is the deprecated version most suitable to serve this request, and make it the most
      * acceptable value via ';q=' suffix. Or if no deprecated version were found, we just leave the header as is.
      */
-    private class VersioningRequest
-            extends HttpServletRequestWrapper
+    private void makeRequestVersioned( ContainerRequestContext requestContext, String reqApiVersion,
+                                       String deprecatedApiVersion )
     {
-
-        private final static String APPLICATION = "application";
-
-        private final String reqApiVersion;
-
-        private final String deprecatedApiVersion;
-
-        public VersioningRequest( HttpServletRequest request, String reqApiVersion, String deprecatedApiVersion )
+        // only care about the "Accept" request header
+        List<String> eu = requestContext.getHeaders().get( ACCEPT );
+        logger.trace( "Adjust header {}, value: {}", ACCEPT, eu );
+        if ( eu == null || eu.isEmpty() )
         {
-            super( request );
-            this.reqApiVersion = reqApiVersion;
-            this.deprecatedApiVersion = deprecatedApiVersion;
+            logger.trace( "header {} is empty", ACCEPT );
+            return;
         }
 
-        @Override
-        public Enumeration<String> getHeaders( String name )
+        String acceptApp = eu.get( 0 );
+
+        String[] tokens = acceptApp.split( "," );
+        if ( tokens.length == 0 )
         {
-            Enumeration<String> eu = super.getHeaders( name );
-
-            if ( isBlank( reqApiVersion ) || isBlank( deprecatedApiVersion ) )
-            {
-                return eu; // not change to headers
-            }
-
-            if ( !ACCEPT.equals( name ) )
-            {
-                return eu; // only care about the "Accept" request header
-            }
-
-            logger.trace( "Adjust header {}, value: {}", ACCEPT, super.getHeader( name ) );
-
-            List<String> values = new ArrayList<>();
-            while ( eu.hasMoreElements() )
-            {
-                String tok = eu.nextElement();
-                if ( tok.startsWith( APPLICATION ) ) // adjust, e.g., application/json -> application/indy-v1+json
-                {
-                    float priority = 1f;
-                    String[] kv = tok.split( "/" );
-                    values.add( APPLICATION + "/indy-v" + deprecatedApiVersion + "+" + kv[1] + ";q=" + priority );
-                    values.add( tok + ";q=" + getNextPriority( priority ) ); // keep the original value
-                }
-                else
-                {
-                    values.add( tok );
-                }
-            }
-
-            logger.trace( "Adjust complete, new values: {}", values );
-            return Collections.enumeration( values );
+            logger.trace( "header {} is empty", ACCEPT );
+            return;
         }
 
-        private float getNextPriority( float priority )
+        List<String> values = new ArrayList<>();
+        for ( String tok : tokens )
         {
-            return priority - 0.1f;
+            if ( tok.startsWith( APPLICATION ) ) // adjust, e.g., application/json -> application/indy-v1+json
+            {
+                logger.trace( "Adjust value {}", tok );
+                float priority = 1f;
+                String[] kv = tok.split( "/" );
+                values.add( APPLICATION + "/indy-v" + deprecatedApiVersion + "+" + kv[1] + ";q=" + priority );
+                values.add( tok + ";q=" + getNextPriority( priority ) ); // keep the original value
+            }
+            else
+            {
+                logger.trace( "Not adjust value {}", tok );
+                values.add( tok );
+            }
         }
 
+        logger.trace( "Adjust complete, new values: {}", values );
+        requestContext.getHeaders().put( ACCEPT, values );
+    }
+
+    private float getNextPriority( float priority )
+    {
+        return priority - 0.1f;
     }
 }

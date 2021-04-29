@@ -55,7 +55,7 @@ mp:
       # the default buffer size for emitter's OnOverflow buffer strategy of back-pressure control
       default-buffer-size: 1024
     outgoing:
-      store-event:
+      scheduler-event:
         connector: "smallrye-kafka"
         topics: "scheduler-event"
         value:
