@@ -13,22 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.commonjava.indy.service.scheduler.data.cache;
+package org.commonjava.indy.service.scheduler.data.ispn;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
-import org.codehaus.plexus.interpolation.InterpolationException;
-import org.codehaus.plexus.interpolation.PropertiesBasedValueSource;
-import org.codehaus.plexus.interpolation.StringSearchInterpolator;
 import org.commonjava.indy.service.scheduler.config.InfinispanConfiguration;
-import org.commonjava.indy.service.scheduler.config.MetricsConfiguration;
-import org.commonjava.indy.service.scheduler.config.ScheduleConfiguration;
 import org.commonjava.indy.service.scheduler.data.metrics.DefaultMetricsManager;
 import org.infinispan.Cache;
 import org.infinispan.commons.marshall.MarshallableTypeHints;
 import org.infinispan.configuration.ConfigurationManager;
 import org.infinispan.configuration.parsing.ConfigurationBuilderHolder;
 import org.infinispan.configuration.parsing.ParserRegistry;
+import org.infinispan.counter.api.StrongCounter;
 import org.infinispan.manager.DefaultCacheManager;
 import org.infinispan.manager.EmbeddedCacheManager;
 import org.slf4j.Logger;
@@ -37,29 +32,30 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.inject.Default;
 import javax.inject.Inject;
 import java.io.ByteArrayInputStream;
+import java.io.Externalizable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.Charset;
+import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static org.commonjava.indy.service.scheduler.data.metrics.DefaultMetricsManager.INDY_METRIC_ISPN;
-import static org.commonjava.indy.service.scheduler.data.metrics.NameUtils.getSupername;
-
-/**
- * Created by jdcasey on 3/8/16.
- */
 @ApplicationScoped
-public class CacheProducer
+@Default
+public class LocalCacheProducer
+        extends AbstractCacheProducer
 {
     Logger logger = LoggerFactory.getLogger( getClass() );
 
     private static final String ISPN_XML = "infinispan.xml";
+
+    //    private static final String ISPN_CLUSTER_XML = "infinispan-cluster.xml";
 
     private EmbeddedCacheManager cacheManager;
 
@@ -69,54 +65,70 @@ public class CacheProducer
     @Inject
     DefaultMetricsManager metricsManager;
 
-    @Inject
-    MetricsConfiguration metricsConfig;
+    //    @Inject
+    //    MetricsConfiguration metricsConfig;
 
-    @Inject
-    ScheduleConfiguration scheduleConfig;
+    //    @Inject
+    //    ScheduleConfiguration scheduleConfig;
+
+    //    private EmbeddedCacheManager clusterCacheManager;
 
     private final Map<String, CacheHandle> caches = new ConcurrentHashMap<>(); // hold embedded and remote caches
 
-    protected CacheProducer()
+    private final Map<String, StrongCounter> counters = new ConcurrentHashMap<>();
+
+    protected LocalCacheProducer()
     {
     }
 
-    public CacheProducer( InfinispanConfiguration ispnConfig, EmbeddedCacheManager cacheManager )
+    public LocalCacheProducer( EmbeddedCacheManager cacheManager, InfinispanConfiguration ispnConfig )
     {
-        this.ispnConfig = ispnConfig;
         this.cacheManager = cacheManager;
+        this.ispnConfig = ispnConfig;
     }
 
     @PostConstruct
-    public void onStart()
+    public void start()
     {
-        cacheManager = startCacheManager();
+        startEmbeddedManager();
     }
 
-    private EmbeddedCacheManager startCacheManager()
+    private void startEmbeddedManager()
     {
-        if ( !ScheduleConfiguration.STORAGE_INFINISPAN.equals( scheduleConfig.getStorageType() ) )
-        {
-            logger.info( "Not an infinispan store data manager enabled, so will not init this cache producer" );
-            return null;
-        }
+        cacheManager = startCacheManager( cacheManager, ISPN_XML, false );
+    }
 
+    //    private void startClusterManager()
+    //    {
+    //        if ( clusterConfiguration == null || !clusterConfiguration.isEnabled() )
+    //        {
+    //            logger.info( "Infinispan cluster configuration not enabled. Skip." );
+    //            return;
+    //        }
+    //        clusterCacheManager = startCacheManager( clusterCacheManager, ISPN_CLUSTER_XML, true );
+    //    }
+
+    private EmbeddedCacheManager startCacheManager( EmbeddedCacheManager cacheMgr, String configFile,
+                                                    Boolean isCluster )
+    {
         // FIXME This is just here to trigger shutdown hook init for embedded log4j in infinispan-embedded-query.
         // FIXES:
         //
         // Thread-15 ERROR Unable to register shutdown hook because JVM is shutting down.
         // java.lang.IllegalStateException: Cannot add new shutdown hook as this is not started. Current state: STOPPED
         //
-        new MarshallableTypeHints().getBufferSizePredictor( CacheHandle.class );
+        new MarshallableTypeHints().getBufferSizePredictor( LocalCacheHandle.class );
 
         File confDir = ispnConfig.getInfinispanConfigDir();
-        File ispnConf = new File( confDir, ISPN_XML );
+        File ispnConf = new File( confDir, configFile );
 
-        EmbeddedCacheManager mgr = cacheManager;
-        try (InputStream resouceStream = Thread.currentThread().getContextClassLoader().getResourceAsStream( ISPN_XML ))
+        EmbeddedCacheManager mgr = cacheMgr;
+        try (InputStream resouceStream = Thread.currentThread()
+                                               .getContextClassLoader()
+                                               .getResourceAsStream( configFile ))
         {
 
-            String resourceStr = interpolateStrFromStream( resouceStream, "CLASSPATH:" + ISPN_XML );
+            String resourceStr = interpolateStrFromStream( resouceStream, "CLASSPATH:" + configFile );
 
             if ( ispnConf.exists() )
             {
@@ -135,9 +147,7 @@ public class CacheProducer
             {
                 try
                 {
-                    logger.info(
-                            "Not found customized config {}, using CLASSPATH resource Infinispan configuration:\n\n{}\n\n",
-                            ispnConf, resourceStr );
+                    logger.info( "Using CLASSPATH resource Infinispan configuration:\n\n{}\n\n", resourceStr );
                     if ( mgr == null )
                     {
                         mgr = new DefaultCacheManager(
@@ -152,6 +162,12 @@ public class CacheProducer
                 }
             }
 
+            if ( isCluster )
+            {
+                String[] cacheNames = mgr.getCacheNames().toArray( new String[] {} );
+                logger.info( "Starting cluster caches to make sure they existed: {}", Arrays.toString( cacheNames ) );
+                mgr.startCaches( cacheNames );
+            }
         }
         catch ( IOException e )
         {
@@ -163,29 +179,52 @@ public class CacheProducer
     }
 
     /**
+     * Get a BasicCache instance. If the remote cache is enabled, it will match the named with remote.patterns.
+     * If matched, it will create/return a RemoteCache. If not matched, an embedded cache will be created/returned to the caller.
+     */
+    public synchronized <K, V> BasicCacheHandle<K, V> getBasicCache( String named )
+    {
+        return getCache( named );
+    }
+
+    /**
+     * Get named cache and verify that the cache obeys our expectations for clustering.
+     * There is no way to find out the runtime type of generic type parameters and we need to pass the k/v class types.
+     */
+    public synchronized <K, V> CacheHandle<K, V> getClusterizableCache( String named, Class<K> kClass, Class<V> vClass )
+    {
+        verifyClusterizable( kClass, vClass );
+        return getCache( named );
+    }
+
+    private <K, V> void verifyClusterizable( Class<K> kClass, Class<V> vClass )
+    {
+        if ( !Serializable.class.isAssignableFrom( kClass ) && !Externalizable.class.isAssignableFrom( kClass )
+                || !Serializable.class.isAssignableFrom( vClass ) && !Externalizable.class.isAssignableFrom( vClass ) )
+        {
+            throw new RuntimeException( kClass + " or " + vClass + " is not Serializable/Externalizable" );
+        }
+    }
+
+    /**
      * Retrieve an embedded cache with a pre-defined configuration (from infinispan.xml) or the default cache configuration.
      */
     public synchronized <K, V> CacheHandle<K, V> getCache( String named )
     {
-        if ( cacheManager == null )
-        {
-            throw new IllegalStateException(
-                    "CacheManager is not initialized. Have you enabled the infinispan store data manager? (repository.data-storage)" );
-        }
         logger.debug( "Get embedded cache, name: {}", named );
-        return (CacheHandle) caches.computeIfAbsent( named, ( k ) -> {
+        return (CacheHandle<K, V>) caches.computeIfAbsent( named, ( k ) -> {
             Cache<K, V> cache = cacheManager.getCache( k );
-            return new CacheHandle<>( k, cache, metricsManager, getCacheMetricPrefix( k ) );
+            //            if ( clusterConfiguration != null && clusterConfiguration.isEnabled() && clusterCacheManager.cacheExists(
+            //                    k ) )
+            //            {
+            //                cache = clusterCacheManager.getCache( k );
+            //            }
+            return new CacheHandle( k, cache, metricsManager, getCacheMetricPrefix( k ) );
         } );
     }
 
-    private String getCacheMetricPrefix( String named )
-    {
-        return metricsManager == null ? null : getSupername( metricsConfig.getNodePrefix(), INDY_METRIC_ISPN, named );
-    }
-
     @PreDestroy
-    public synchronized void shutdown()
+    public synchronized void stop()
     {
         logger.info( "Stopping Infinispan caches." );
         caches.forEach( ( name, cacheHandle ) -> cacheHandle.stop() );
@@ -196,37 +235,11 @@ public class CacheProducer
             cacheManager = null;
         }
 
-    }
-
-    //    public int getShutdownPriority()
-    //    {
-    //        return 10;
-    //    }
-
-    private String interpolateStrFromStream( InputStream inputStream, String path )
-    {
-        String configuration;
-        try
-        {
-            configuration = IOUtils.toString( inputStream, Charset.defaultCharset() );
-        }
-        catch ( IOException e )
-        {
-            throw new RuntimeException( "Cannot read infinispan configuration from : " + path, e );
-        }
-
-        StringSearchInterpolator interpolator = new StringSearchInterpolator();
-        interpolator.addValueSource( new PropertiesBasedValueSource( System.getProperties() ) );
-
-        try
-        {
-            configuration = interpolator.interpolate( configuration );
-        }
-        catch ( InterpolationException e )
-        {
-            throw new RuntimeException( "Cannot resolve expressions in infinispan configuration from: " + path, e );
-        }
-        return configuration;
+        //        if ( clusterCacheManager != null )
+        //        {
+        //            clusterCacheManager.stop();
+        //            clusterCacheManager = null;
+        //        }
     }
 
     /**
@@ -244,9 +257,9 @@ public class CacheProducer
      * {@link ParserRegistry}
      * {@link ConfigurationManager}
      *
-     * @param cacheMgr -
-     * @param config -
-     * @param path -
+     * @param cacheMgr
+     * @param config
+     * @param path
      */
     private EmbeddedCacheManager mergedCachesFromConfig( EmbeddedCacheManager cacheMgr, String config, String path )
     {
@@ -287,6 +300,11 @@ public class CacheProducer
         }
 
         return mgr;
+    }
+
+    public EmbeddedCacheManager getCacheManager()
+    {
+        return cacheManager;
     }
 
 }

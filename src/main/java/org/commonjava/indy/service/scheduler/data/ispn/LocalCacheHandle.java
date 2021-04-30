@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.commonjava.indy.service.scheduler.data.cache;
+package org.commonjava.indy.service.scheduler.data.ispn;
 
 import org.apache.commons.lang3.StringUtils;
 import org.commonjava.indy.service.scheduler.data.metrics.DefaultMetricsManager;
@@ -27,19 +27,19 @@ import java.util.function.Supplier;
 /**
  * Holder class that helps manage the shutdown process for things that use Infinispan.
  */
-public class CacheHandle<K, V>
+public class LocalCacheHandle<K, V>
         extends BasicCacheHandle<K, V>
 {
-    protected CacheHandle()
+    protected LocalCacheHandle()
     {
     }
 
-    public CacheHandle( String named, Cache<K, V> cache, DefaultMetricsManager metricsManager, String metricPrefix )
+    public LocalCacheHandle( String named, Cache<K, V> cache, DefaultMetricsManager metricsManager, String metricPrefix )
     {
         super( named, cache, metricsManager, metricPrefix );
     }
 
-    public CacheHandle(String named, Cache<K, V> cache )
+    public LocalCacheHandle( String named, Cache<K, V> cache )
     {
         super( named, cache, null, null );
     }

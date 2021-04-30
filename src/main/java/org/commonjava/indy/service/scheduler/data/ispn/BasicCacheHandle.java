@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.commonjava.indy.service.scheduler.data.cache;
+package org.commonjava.indy.service.scheduler.data.ispn;
 
 import org.commonjava.indy.service.scheduler.data.metrics.DefaultMetricsManager;
 import org.infinispan.commons.api.BasicCache;

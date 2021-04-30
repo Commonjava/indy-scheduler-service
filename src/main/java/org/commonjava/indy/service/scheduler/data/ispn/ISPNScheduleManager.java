@@ -18,11 +18,8 @@ package org.commonjava.indy.service.scheduler.data.ispn;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.quarkus.runtime.Startup;
-import org.commonjava.indy.service.scheduler.config.ScheduleConfiguration;
 import org.commonjava.indy.service.scheduler.data.ScheduleManager;
 import org.commonjava.indy.service.scheduler.data.StandaloneScheduleManager;
-import org.commonjava.indy.service.scheduler.data.cache.CacheHandle;
-import org.commonjava.indy.service.scheduler.data.cache.ScheduleCache;
 import org.commonjava.indy.service.scheduler.event.ScheduleEvent;
 import org.commonjava.indy.service.scheduler.exception.SchedulerException;
 import org.commonjava.indy.service.scheduler.model.ContentExpiration;
@@ -30,9 +27,8 @@ import org.commonjava.indy.service.scheduler.model.Expiration;
 import org.commonjava.indy.service.scheduler.model.ExpirationSet;
 import org.commonjava.indy.service.scheduler.model.ScheduleKey;
 import org.commonjava.indy.service.scheduler.model.ScheduleValue;
-import org.commonjava.indy.service.scheduler.model.spi.pkg.ContentAdvisor;
-import org.commonjava.indy.service.scheduler.model.spi.pkg.ContentQuality;
-import org.hibernate.search.mapper.orm.session.SearchSession;
+import org.infinispan.Cache;
+import org.infinispan.client.hotrod.RemoteCache;
 import org.infinispan.commons.api.BasicCache;
 import org.infinispan.container.entries.CacheEntry;
 import org.infinispan.metadata.Metadata;
@@ -52,8 +48,6 @@ import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.event.Event;
-import javax.enterprise.inject.Any;
-import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 import java.io.IOException;
 import java.time.Instant;
@@ -64,15 +58,10 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
-import java.util.Spliterator;
-import java.util.Spliterators;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
-
-import static org.commonjava.indy.service.scheduler.data.ScheduleManagerUtils.storeKeyFrom;
 
 @SuppressWarnings( "RedundantThrows" )
 @ApplicationScoped
@@ -99,22 +88,22 @@ public class ISPNScheduleManager
     @Inject
     ObjectMapper objectMapper;
 
-    @Inject
-    ScheduleConfiguration schedulerConfig;
-
-    @Inject
-    SearchSession searchSession;
+//    @Inject
+//    ScheduleConfiguration schedulerConfig;
+//
+//    @Inject
+//    SearchSession searchSession;
 
     @Inject
     @ScheduleCache
     CacheHandle<ScheduleKey, ScheduleValue> scheduleCache;
 
-    @Inject
-    @Any
-    Instance<ContentAdvisor> contentAdvisor;
+//    @Inject
+//    @Any
+//    Instance<ContentAdvisor> contentAdvisor;
 
     @Inject
-    private Event<ScheduleEvent> eventDispatcher;
+    Event<ScheduleEvent> eventDispatcher;
 
     @PostConstruct
     public void init()
@@ -141,146 +130,24 @@ public class ISPNScheduleManager
         scheduleCache.stop();
     }
 
-    private <K, V> void registerCacheListener( CacheHandle<K, V> cache )
+    private <K, V> void registerCacheListener( BasicCacheHandle<K, V> cache )
     {
-        cache.executeCache( c -> {
-            c.addListener( ISPNScheduleManager.this );
+        cache.execute( c -> {
+            if ( c instanceof Cache )
+            {
+                ( (Cache) c ).addListener( ISPNScheduleManager.this );
+            }
+            if ( c instanceof RemoteCache )
+            {
+                ( (RemoteCache) c ).addClientListener( ISPNScheduleManager.this );
+            }
             return null;
         } );
     }
 
-    public void rescheduleSnapshotTimeouts( final HostedRepository deploy )
-            throws SchedulerException
-    {
-        if ( !isEnabled() )
-        {
-            logger.debug( "Scheduler disabled." );
-            return;
-        }
-
-        int timeout = -1;
-        if ( deploy.isAllowSnapshots() && deploy.getSnapshotTimeoutSeconds() > 0 )
-        {
-            timeout = deploy.getSnapshotTimeoutSeconds();
-        }
-
-        if ( timeout > 0 )
-        {
-            final Set<ScheduleKey> canceled =
-                    cancelAllBefore( new StoreKeyMatcher( deploy.getKey(), CONTENT_JOB_TYPE ), timeout );
-
-            for ( final ScheduleKey key : canceled )
-            {
-                final String path = key.getName();
-                final String sk = storeKeyFrom( key.getGroupName() );
-
-                scheduleContentExpiration( sk, path, timeout );
-            }
-        }
-    }
-
-    public void rescheduleProxyTimeouts( final RemoteRepository repo )
-            throws SchedulerException
-    {
-        if ( !isEnabled() )
-        {
-            logger.debug( "Scheduler disabled." );
-            return;
-        }
-
-        int timeout = -1;
-        if ( !repo.isPassthrough() && repo.getCacheTimeoutSeconds() > 0 )
-        {
-            timeout = repo.getCacheTimeoutSeconds();
-        }
-        else if ( repo.isPassthrough() )
-        {
-            timeout = config.getPassthroughTimeoutSeconds();
-        }
-
-        if ( timeout > 0 )
-        {
-            final Set<ScheduleKey> canceled =
-                    cancelAllBefore( new StoreKeyMatcher( repo.getKey(), CONTENT_JOB_TYPE ), timeout );
-            for ( final ScheduleKey key : canceled )
-            {
-                final String path = key.getName();
-                final String sk = storeKeyFrom( key.getGroupName() );
-
-                scheduleContentExpiration( sk, path, timeout );
-            }
-        }
-    }
-
-    public void setProxyTimeouts( final String storeKey, final String path )
-            throws SchedulerException
-    {
-        if ( !isEnabled() )
-        {
-            logger.debug( "Scheduler disabled." );
-            return;
-        }
-
-        RemoteRepository repo = null;
-        try
-        {
-            repo = (RemoteRepository) dataManager.getArtifactStore( storeKey );
-        }
-        catch ( final IndyDataException e )
-        {
-            logger.error( String.format( "Failed to retrieve store for: %s. Reason: %s", storeKey, e.getMessage() ),
-                          e );
-        }
-
-        if ( repo == null )
-        {
-            return;
-        }
-
-        int timeout = config.getPassthroughTimeoutSeconds();
-        final ConcreteResource resource = new ConcreteResource( LocationUtils.toLocation( repo ), path );
-        final SpecialPathInfo info = specialPathManager.getSpecialPathInfo( resource, storeKey.getPackageType() );
-        if ( !repo.isPassthrough() )
-        {
-            if ( ( info != null && info.isMetadata() ) && repo.getMetadataTimeoutSeconds() >= 0 )
-            {
-                if ( repo.getMetadataTimeoutSeconds() == 0 )
-                {
-                    logger.debug( "Using default metadata timeout for: {}", resource );
-                    timeout = config.getRemoteMetadataTimeoutSeconds();
-                }
-                else
-                {
-                    logger.debug( "Using metadata timeout for: {}", resource );
-                    timeout = repo.getMetadataTimeoutSeconds();
-                }
-            }
-            else
-            {
-                if ( info == null )
-                {
-                    logger.debug( "No special path info for: {}", resource );
-                }
-                else
-                {
-                    logger.debug( "{} is a special path, but not metadata.", resource );
-                }
-
-                timeout = repo.getCacheTimeoutSeconds();
-            }
-        }
-
-        if ( timeout > 0 )
-        {
-            //            logger.info( "[PROXY TIMEOUT SET] {}/{}; {}", repo.getKey(), path, new Date( System.currentTimeMillis()
-            //                + timeout ) );
-            removeCache( new ScheduleKey( storeKey, CONTENT_JOB_TYPE, path ) );
-            scheduleContentExpiration( storeKey, path, timeout );
-        }
-    }
-
-    public void scheduleForStore( final String storeKey, final String jobType, final String jobName,
-                                  final Object payload, final int startSeconds )
+    @Override
+    public void schedule( final String key, final String jobType, final String jobName, final Object payload,
+                          final int startSeconds )
             throws SchedulerException
     {
         if ( !isEnabled() )
@@ -302,13 +169,27 @@ public class ISPNScheduleManager
 
         dataMap.put( SCHEDULE_TIME, System.currentTimeMillis() );
 
-        final ScheduleKey cacheKey = new ScheduleKey( storeKey, jobType, jobName );
+        final ScheduleKey cacheKey = new ScheduleKey( key, jobType, jobName );
 
         scheduleCache.execute( cache -> cache.put( cacheKey, new ScheduleValue( cacheKey, dataMap ), startSeconds,
                                                    TimeUnit.SECONDS ) );
         logger.debug( "Scheduled for the key {} with timeout: {} seconds", cacheKey, startSeconds );
     }
 
+    @Override
+    public Optional<ScheduleKey> cancel( final String key, final String jobType, final String jobName )
+    {
+        if ( !isEnabled() )
+        {
+            logger.debug( "Scheduler disabled." );
+            return Optional.empty();
+        }
+        ScheduleKey scheduleKey = new ScheduleKey( key, jobType, jobName );
+        removeCache( scheduleKey );
+        return Optional.of( scheduleKey );
+    }
+
+    @Deprecated
     public void scheduleContentExpiration( final String storeKey, final String path, final int timeoutSeconds )
             throws SchedulerException
     {
@@ -321,139 +202,7 @@ public class ISPNScheduleManager
         logger.info( "Scheduling timeout for: {} in: {} in: {} seconds (at: {}).", path, storeKey, timeoutSeconds,
                      new Date( System.currentTimeMillis() + ( timeoutSeconds * 1000L ) ) );
 
-        scheduleForStore( storeKey, CONTENT_JOB_TYPE, path, new ContentExpiration( storeKey, path ), timeoutSeconds );
-    }
-
-    public void setSnapshotTimeouts( final String storeKey, final String path )
-            throws SchedulerException
-    {
-        if ( !isEnabled() )
-        {
-            logger.debug( "Scheduler disabled." );
-            return;
-        }
-
-        HostedRepository deploy = null;
-        try
-        {
-            final ArtifactStore store = dataManager.getArtifactStore( storeKey );
-            if ( store == null )
-            {
-                return;
-            }
-
-            if ( store instanceof HostedRepository )
-            {
-                deploy = (HostedRepository) store;
-            }
-            else if ( store instanceof Group )
-            {
-                final Group group = (Group) store;
-                deploy = findDeployPoint( group );
-            }
-        }
-        catch ( final IndyDataException e )
-        {
-            logger.error(
-                    String.format( "Failed to retrieve deploy point for: %s. Reason: %s", storeKey, e.getMessage() ),
-                    e );
-        }
-
-        if ( deploy == null )
-        {
-            return;
-        }
-
-        final ContentAdvisor advisor = StreamSupport.stream(
-                Spliterators.spliteratorUnknownSize( contentAdvisor.iterator(), Spliterator.ORDERED ), false )
-                                                    .filter( Objects::nonNull )
-                                                    .findFirst()
-                                                    .orElse( null );
-        final ContentQuality quality = advisor == null ? null : advisor.getContentQuality( path );
-        if ( quality == null )
-        {
-            return;
-        }
-
-        if ( ContentQuality.SNAPSHOT == quality && deploy.getSnapshotTimeoutSeconds() > 0 )
-        {
-            final int timeout = deploy.getSnapshotTimeoutSeconds();
-
-            //            //            logger.info( "[SNAPSHOT TIMEOUT SET] {}/{}; {}", deploy.getKey(), path, new Date( timeout ) );
-            //            cancel( new StoreKeyMatcher( key, CONTENT_JOB_TYPE ), path );
-
-            scheduleContentExpiration( storeKey, path, timeout );
-        }
-    }
-
-    public void rescheduleDisableTimeout( final String storeKey )
-            throws SchedulerException
-    {
-        if ( !isEnabled() )
-        {
-            logger.debug( "Scheduler disabled." );
-            return;
-        }
-
-        ArtifactStore store = null;
-        try
-        {
-            store = dataManager.getArtifactStore( storeKey );
-        }
-        catch ( final IndyDataException e )
-        {
-            logger.error( String.format( "Failed to retrieve store for: %s. Reason: %s", storeKey, e.getMessage() ),
-                          e );
-        }
-
-        if ( store == null )
-        {
-            return;
-        }
-
-        int timeout = store.getDisableTimeout();
-        if ( timeout == TIMEOUT_USE_DEFAULT )
-        {
-            // case TIMEOUT_USE_DEFAULT: will use default timeout configuration
-            timeout = config.getStoreDisableTimeoutSeconds();
-        }
-
-        // No need to cancel as the job will be cancelled immediately after the re-enable in StoreEnablementManager
-        //        final Set<ScheduleKey> canceled =
-        //                cancelAllBefore( new StoreKeyMatcher( store.getKey(), DISABLE_TIMEOUT ),
-        //                                 timeout );
-        //        logger.info( "Cancel disable timeout for stores:{}", canceled );
-
-        if ( timeout > TIMEOUT_USE_DEFAULT && store.isDisabled() )
-        {
-            final String sk = store.getKey();
-            logger.debug( "Set/Reschedule disable timeout for store:{}", sk );
-            scheduleForStore( sk, DISABLE_TIMEOUT, DISABLE_TIMEOUT, sk, timeout );
-        }
-        // Will never consider the TIMEOUT_NEVER_DISABLE case here, will consider this in the calling object(StoreEnablementManager)
-    }
-
-    private HostedRepository findDeployPoint( final Group group )
-            throws IndyDataException
-    {
-        for ( final StoreKey key : group.getConstituents() )
-        {
-            if ( StoreType.hosted == key.getType() )
-            {
-                return (HostedRepository) dataManager.getArtifactStore( key );
-            }
-            else if ( StoreType.group == key.getType() )
-            {
-                final Group grp = (Group) dataManager.getArtifactStore( key );
-                final HostedRepository dp = findDeployPoint( grp );
-                if ( dp != null )
-                {
-                    return dp;
-                }
-            }
-        }
-
-        return null;
+        schedule( storeKey, CONTENT_JOB_TYPE, path, new ContentExpiration( storeKey, path ), timeoutSeconds );
     }
 
     public Set<ScheduleKey> cancelAllBefore( final CacheKeyMatcher<ScheduleKey> matcher, final long timeout )
@@ -536,10 +285,19 @@ public class ISPNScheduleManager
     @Override
     public Expiration findSingleExpiration( final String storeKey, final String jobType )
     {
-        return findSingleExpiration( new StoreKeyMatcher( storeKey, jobType, searchSession ) );
+        return findSingleExpiration( new StoreKeyMatcher( storeKey, jobType ) );
     }
 
-    public Expiration findSingleExpiration( final StoreKeyMatcher matcher )
+    @Override
+    public ExpirationSet findMatchingExpirations( final String jobType )
+    {
+        return findMatchingExpirations( cacheHandle -> cacheHandle.execute( BasicCache::keySet )
+                                                                  .stream()
+                                                                  .filter( key -> key.getType().equals( jobType ) )
+                                                                  .collect( Collectors.toSet() ) );
+    }
+
+    private Expiration findSingleExpiration( final StoreKeyMatcher matcher )
     {
         if ( !isEnabled() )
         {
@@ -555,15 +313,6 @@ public class ISPNScheduleManager
         }
 
         return null;
-    }
-
-    @Override
-    public ExpirationSet findMatchingExpirations( final String jobType )
-    {
-        return findMatchingExpirations( cacheHandle -> cacheHandle.execute( BasicCache::keySet )
-                                                                  .stream()
-                                                                  .filter( key -> key.getType().equals( jobType ) )
-                                                                  .collect( Collectors.toSet() ) );
     }
 
     public ExpirationSet findMatchingExpirations( final CacheKeyMatcher<ScheduleKey> matcher )
@@ -652,7 +401,6 @@ public class ISPNScheduleManager
     {
         return "#" + jobType;
     }
-
 
     private void removeCache( final ScheduleKey cacheKey )
     {
@@ -760,6 +508,270 @@ public class ISPNScheduleManager
 
     private Boolean isEnabled()
     {
-        return schedulerConfig.isCassandraEnabled();
+        //        return schedulerConfig.isCassandraEnabled();
+        //TODO: need this isEnabled method?
+        return true;
     }
+
+    //    public void setSnapshotTimeouts( final String storeKey, final String path )
+    //            throws SchedulerException
+    //    {
+    //        if ( !isEnabled() )
+    //        {
+    //            logger.debug( "Scheduler disabled." );
+    //            return;
+    //        }
+    //
+    //        HostedRepository deploy = null;
+    //        try
+    //        {
+    //            final ArtifactStore store = dataManager.getArtifactStore( storeKey );
+    //            if ( store == null )
+    //            {
+    //                return;
+    //            }
+    //
+    //            if ( store instanceof HostedRepository )
+    //            {
+    //                deploy = (HostedRepository) store;
+    //            }
+    //            else if ( store instanceof Group )
+    //            {
+    //                final Group group = (Group) store;
+    //                deploy = findDeployPoint( group );
+    //            }
+    //        }
+    //        catch ( final IndyDataException e )
+    //        {
+    //            logger.error(
+    //                    String.format( "Failed to retrieve deploy point for: %s. Reason: %s", storeKey, e.getMessage() ),
+    //                    e );
+    //        }
+    //
+    //        if ( deploy == null )
+    //        {
+    //            return;
+    //        }
+    //
+    //        final ContentAdvisor advisor = StreamSupport.stream(
+    //                Spliterators.spliteratorUnknownSize( contentAdvisor.iterator(), Spliterator.ORDERED ), false )
+    //                                                    .filter( Objects::nonNull )
+    //                                                    .findFirst()
+    //                                                    .orElse( null );
+    //        final ContentQuality quality = advisor == null ? null : advisor.getContentQuality( path );
+    //        if ( quality == null )
+    //        {
+    //            return;
+    //        }
+    //
+    //        if ( ContentQuality.SNAPSHOT == quality && deploy.getSnapshotTimeoutSeconds() > 0 )
+    //        {
+    //            final int timeout = deploy.getSnapshotTimeoutSeconds();
+    //
+    //            //            //            logger.info( "[SNAPSHOT TIMEOUT SET] {}/{}; {}", deploy.getKey(), path, new Date( timeout ) );
+    //            //            cancel( new StoreKeyMatcher( key, CONTENT_JOB_TYPE ), path );
+    //
+    //            scheduleContentExpiration( storeKey, path, timeout );
+    //        }
+    //    }
+    //
+    //    public void rescheduleDisableTimeout( final String storeKey )
+    //            throws SchedulerException
+    //    {
+    //        if ( !isEnabled() )
+    //        {
+    //            logger.debug( "Scheduler disabled." );
+    //            return;
+    //        }
+    //
+    //        ArtifactStore store = null;
+    //        try
+    //        {
+    //            store = dataManager.getArtifactStore( storeKey );
+    //        }
+    //        catch ( final IndyDataException e )
+    //        {
+    //            logger.error( String.format( "Failed to retrieve store for: %s. Reason: %s", storeKey, e.getMessage() ),
+    //                          e );
+    //        }
+    //
+    //        if ( store == null )
+    //        {
+    //            return;
+    //        }
+    //
+    //        int timeout = store.getDisableTimeout();
+    //        if ( timeout == TIMEOUT_USE_DEFAULT )
+    //        {
+    //            // case TIMEOUT_USE_DEFAULT: will use default timeout configuration
+    //            timeout = config.getStoreDisableTimeoutSeconds();
+    //        }
+    //
+    //        // No need to cancel as the job will be cancelled immediately after the re-enable in StoreEnablementManager
+    //        //        final Set<ScheduleKey> canceled =
+    //        //                cancelAllBefore( new StoreKeyMatcher( store.getKey(), DISABLE_TIMEOUT ),
+    //        //                                 timeout );
+    //        //        logger.info( "Cancel disable timeout for stores:{}", canceled );
+    //
+    //        if ( timeout > TIMEOUT_USE_DEFAULT && store.isDisabled() )
+    //        {
+    //            final String sk = store.getKey();
+    //            logger.debug( "Set/Reschedule disable timeout for store:{}", sk );
+    //            scheduleForStore( sk, DISABLE_TIMEOUT, DISABLE_TIMEOUT, sk, timeout );
+    //        }
+    //        // Will never consider the TIMEOUT_NEVER_DISABLE case here, will consider this in the calling object(StoreEnablementManager)
+    //    }
+
+    //    private HostedRepository findDeployPoint( final Group group )
+    //            throws IndyDataException
+    //    {
+    //        for ( final StoreKey key : group.getConstituents() )
+    //        {
+    //            if ( StoreType.hosted == key.getType() )
+    //            {
+    //                return (HostedRepository) dataManager.getArtifactStore( key );
+    //            }
+    //            else if ( StoreType.group == key.getType() )
+    //            {
+    //                final Group grp = (Group) dataManager.getArtifactStore( key );
+    //                final HostedRepository dp = findDeployPoint( grp );
+    //                if ( dp != null )
+    //                {
+    //                    return dp;
+    //                }
+    //            }
+    //        }
+    //
+    //        return null;
+    //    }
+
+    //    public void rescheduleSnapshotTimeouts( final HostedRepository deploy )
+    //            throws SchedulerException
+    //    {
+    //        if ( !isEnabled() )
+    //        {
+    //            logger.debug( "Scheduler disabled." );
+    //            return;
+    //        }
+    //
+    //        int timeout = -1;
+    //        if ( deploy.isAllowSnapshots() && deploy.getSnapshotTimeoutSeconds() > 0 )
+    //        {
+    //            timeout = deploy.getSnapshotTimeoutSeconds();
+    //        }
+    //
+    //        if ( timeout > 0 )
+    //        {
+    //            final Set<ScheduleKey> canceled =
+    //                    cancelAllBefore( new StoreKeyMatcher( deploy.getKey(), CONTENT_JOB_TYPE ), timeout );
+    //
+    //            for ( final ScheduleKey key : canceled )
+    //            {
+    //                final String path = key.getName();
+    //                final String sk = storeKeyFrom( key.getGroupName() );
+    //
+    //                scheduleContentExpiration( sk, path, timeout );
+    //            }
+    //        }
+    //    }
+    //
+    //    public void rescheduleProxyTimeouts( final RemoteRepository repo )
+    //            throws SchedulerException
+    //    {
+    //        if ( !isEnabled() )
+    //        {
+    //            logger.debug( "Scheduler disabled." );
+    //            return;
+    //        }
+    //
+    //        int timeout = -1;
+    //        if ( !repo.isPassthrough() && repo.getCacheTimeoutSeconds() > 0 )
+    //        {
+    //            timeout = repo.getCacheTimeoutSeconds();
+    //        }
+    //        else if ( repo.isPassthrough() )
+    //        {
+    //            timeout = config.getPassthroughTimeoutSeconds();
+    //        }
+    //
+    //        if ( timeout > 0 )
+    //        {
+    //            final Set<ScheduleKey> canceled =
+    //                    cancelAllBefore( new StoreKeyMatcher( repo.getKey(), CONTENT_JOB_TYPE ), timeout );
+    //            for ( final ScheduleKey key : canceled )
+    //            {
+    //                final String path = key.getName();
+    //                final String sk = storeKeyFrom( key.getGroupName() );
+    //
+    //                scheduleContentExpiration( sk, path, timeout );
+    //            }
+    //        }
+    //    }
+    //
+    //    public void setProxyTimeouts( final String storeKey, final String path )
+    //            throws SchedulerException
+    //    {
+    //        if ( !isEnabled() )
+    //        {
+    //            logger.debug( "Scheduler disabled." );
+    //            return;
+    //        }
+    //
+    //        RemoteRepository repo = null;
+    //        try
+    //        {
+    //            repo = (RemoteRepository) dataManager.getArtifactStore( storeKey );
+    //        }
+    //        catch ( final IndyDataException e )
+    //        {
+    //            logger.error( String.format( "Failed to retrieve store for: %s. Reason: %s", storeKey, e.getMessage() ),
+    //                          e );
+    //        }
+    //
+    //        if ( repo == null )
+    //        {
+    //            return;
+    //        }
+    //
+    //        int timeout = config.getPassthroughTimeoutSeconds();
+    //        final ConcreteResource resource = new ConcreteResource( LocationUtils.toLocation( repo ), path );
+    //        final SpecialPathInfo info = specialPathManager.getSpecialPathInfo( resource, storeKey.getPackageType() );
+    //        if ( !repo.isPassthrough() )
+    //        {
+    //            if ( ( info != null && info.isMetadata() ) && repo.getMetadataTimeoutSeconds() >= 0 )
+    //            {
+    //                if ( repo.getMetadataTimeoutSeconds() == 0 )
+    //                {
+    //                    logger.debug( "Using default metadata timeout for: {}", resource );
+    //                    timeout = config.getRemoteMetadataTimeoutSeconds();
+    //                }
+    //                else
+    //                {
+    //                    logger.debug( "Using metadata timeout for: {}", resource );
+    //                    timeout = repo.getMetadataTimeoutSeconds();
+    //                }
+    //            }
+    //            else
+    //            {
+    //                if ( info == null )
+    //                {
+    //                    logger.debug( "No special path info for: {}", resource );
+    //                }
+    //                else
+    //                {
+    //                    logger.debug( "{} is a special path, but not metadata.", resource );
+    //                }
+    //
+    //                timeout = repo.getCacheTimeoutSeconds();
+    //            }
+    //        }
+    //
+    //        if ( timeout > 0 )
+    //        {
+    //            //            logger.info( "[PROXY TIMEOUT SET] {}/{}; {}", repo.getKey(), path, new Date( System.currentTimeMillis()
+    //            //                + timeout ) );
+    //            removeCache( new ScheduleKey( storeKey, CONTENT_JOB_TYPE, path ) );
+    //            scheduleContentExpiration( storeKey, path, timeout );
+    //        }
+    //    }
 }

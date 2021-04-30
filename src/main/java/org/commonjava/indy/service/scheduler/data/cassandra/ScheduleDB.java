@@ -8,7 +8,8 @@ import com.datastax.driver.core.Session;
 import com.datastax.driver.mapping.Mapper;
 import com.datastax.driver.mapping.MappingManager;
 import org.commonjava.indy.service.scheduler.config.CassandraConfiguration;
-import org.commonjava.indy.service.scheduler.data.cache.CacheProducer;
+import org.commonjava.indy.service.scheduler.data.ispn.LocalCacheProducer;
+import org.commonjava.indy.service.scheduler.data.ispn.RemoteCacheProducer;
 import org.commonjava.indy.service.scheduler.event.ScheduleTriggerEvent;
 import org.commonjava.indy.service.scheduler.model.cassandra.DtxExpiration;
 import org.commonjava.indy.service.scheduler.model.cassandra.DtxSchedule;
@@ -42,7 +43,7 @@ public class ScheduleDB
     CassandraConfiguration cassandraConfig;
 
     @Inject
-    private CacheProducer cacheProducer;
+    RemoteCacheProducer cacheProducer;
 
     @Inject
     Event<ScheduleTriggerEvent> eventDispatcher;
@@ -73,7 +74,7 @@ public class ScheduleDB
     {
     }
 
-    public ScheduleDB( CassandraClient client, CacheProducer cacheProducer )
+    public ScheduleDB( CassandraClient client, RemoteCacheProducer cacheProducer )
     {
         this.client = client;
         this.cacheProducer = cacheProducer;

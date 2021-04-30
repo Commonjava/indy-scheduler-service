@@ -65,4 +65,14 @@ public class InfinispanConfiguration
     {
         this.hotrodClientConfigPath = Optional.of( hotrodClientConfigPath );
     }
+
+    public Boolean isRemoteEnabled()
+    {
+        return remoteEnabled;
+    }
+
+    public void setRemoteEnabled( Boolean remoteEnabled )
+    {
+        this.remoteEnabled = remoteEnabled;
+    }
 }

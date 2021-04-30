@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.commonjava.indy.service.scheduler.data.cache;
+package org.commonjava.indy.service.scheduler.data.ispn;
 
 import org.commonjava.indy.service.scheduler.model.ScheduleKey;
 import org.commonjava.indy.service.scheduler.model.ScheduleValue;
@@ -36,7 +36,7 @@ public class ScheduleCacheProducer
     private final Logger logger = LoggerFactory.getLogger( getClass() );
 
     @Inject
-    private CacheProducer cacheProducer;
+    LocalCacheProducer cacheProducer;
 
     private static final String SCHEDULE_EXPIRE = "schedule-expire-cache";
 

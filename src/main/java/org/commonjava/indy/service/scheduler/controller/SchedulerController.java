@@ -13,17 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.commonjava.indy.service.scheduler.data.ispn;
+package org.commonjava.indy.service.scheduler.controller;
 
-import java.util.Set;
+import org.commonjava.indy.service.scheduler.data.ScheduleManager;
 
-/**
- * Used to match the keys which are contained in {@link org.infinispan.Cache} wrapped in {@link BasicCacheHandle}.
- *
- * @param <T> the type of the cache key
- */
-@FunctionalInterface
-public interface CacheKeyMatcher<T>
+import javax.enterprise.context.ApplicationScoped;
+import javax.inject.Inject;
+
+@ApplicationScoped
+public class SchedulerController
 {
-    Set<T> matches( BasicCacheHandle<T, ?> cacheHandle );
+    @Inject
+    private ScheduleManager scheduleManager;
+
+    protected SchedulerController()
+    {
+    }
+
+    public SchedulerController( ScheduleManager scheduleManager )
+    {
+        this.scheduleManager = scheduleManager;
+    }
+
 }

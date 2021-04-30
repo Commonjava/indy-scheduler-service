@@ -16,12 +16,8 @@
 package org.commonjava.indy.service.scheduler.data.ispn;
 
 import org.commonjava.indy.service.scheduler.data.ScheduleManagerUtils;
-import org.commonjava.indy.service.scheduler.data.cache.CacheHandle;
 import org.commonjava.indy.service.scheduler.model.ScheduleKey;
-import org.commonjava.indy.service.scheduler.model.ScheduleValue;
-import org.hibernate.search.mapper.orm.session.SearchSession;
 
-import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -37,24 +33,25 @@ public class StoreKeyMatcher
 
     private final String groupName;
 
-    private final SearchSession searchSession;
-
-    public StoreKeyMatcher( final String storeKey, final String eventType, final SearchSession searchSession )
+    public StoreKeyMatcher( final String storeKey, final String eventType )
     {
         assert storeKey != null;
-        assert searchSession != null;
         this.groupName = ScheduleManagerUtils.groupName( storeKey, eventType );
-        this.searchSession = searchSession;
     }
 
     @Override
-    public Set<ScheduleKey> matches( CacheHandle<ScheduleKey, ?> cacheHandle )
+    public Set<ScheduleKey> matches( BasicCacheHandle<ScheduleKey, ?> cacheHandle )
     {
-        List<ScheduleValue> list = searchSession.search( ScheduleValue.class )
-                                                .where( f -> f.simpleQueryString()
-                                                              .field( "key.groupName" )
-                                                              .matching( groupName ) )
-                                                .fetchAllHits();
-        return list.stream().map( ScheduleValue::getKey ).collect( Collectors.toSet() );
+        //TODO: Seems the hibernate search has changed a lot in ISPN 11, which included bunch of api changes. Need further research for how it is working.
+        //        List<ScheduleValue> list = searchSession.search( ScheduleValue.class )
+        //                                                .where( f -> f.simpleQueryString()
+        //                                                              .field( "key.groupName" )
+        //                                                              .matching( groupName ) )
+        //
+        //                                                .fetchAllHits();
+        //        return list.stream().map( ScheduleValue::getKey ).collect( Collectors.toSet() );
+        return cacheHandle.execute( c -> c.keySet().stream().filter( k -> k.getGroupName().equals( groupName ) ) )
+                          .collect( Collectors.toSet() );
+
     }
 }
