@@ -32,6 +32,7 @@
   <properties>
     <apiVersion>1</apiVersion>
 
+    <projectEmail>https://github.com/Commonjava/indy-scheduler-service</projectEmail>
     <cassandra.version>3.9.0</cassandra.version>
     <infinispan.version>11.0.8.Final</infinispan.version>
     <agroal.version>1.9</agroal.version>
@@ -94,13 +95,17 @@
       <artifactId>quarkus-junit5</artifactId>
       <scope>test</scope>
     </dependency>
-    <dependency>
-      <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-undertow</artifactId>
-    </dependency>
+<!--    <dependency>-->
+<!--      <groupId>io.quarkus</groupId>-->
+<!--      <artifactId>quarkus-undertow</artifactId>-->
+<!--    </dependency>-->
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-smallrye-reactive-messaging-kafka</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-hibernate-search-orm-elasticsearch</artifactId>
     </dependency>
 
     <dependency>
@@ -132,6 +137,10 @@
           <artifactId>slf4j-jboss-logging</artifactId>
         </exclusion>
       </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-infinispan-client</artifactId>
     </dependency>
     <dependency>
       <groupId>org.jboss.spec.javax.ws.rs</groupId>
@@ -251,6 +260,12 @@
       <plugin>
         <groupId>io.quarkus</groupId>
         <artifactId>quarkus-maven-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <forceJavacCompilerUse>true</forceJavacCompilerUse>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>ru.concerteza.buildnumber</groupId>

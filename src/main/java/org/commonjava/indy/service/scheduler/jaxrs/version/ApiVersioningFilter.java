@@ -27,14 +27,15 @@ import javax.ws.rs.container.ContainerRequestFilter;
 import javax.ws.rs.container.ContainerResponseContext;
 import javax.ws.rs.container.ContainerResponseFilter;
 import javax.ws.rs.core.MultivaluedMap;
+import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.Provider;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import static javax.servlet.http.HttpServletResponse.SC_GONE;
 import static javax.ws.rs.core.HttpHeaders.ACCEPT;
+import static javax.ws.rs.core.Response.Status.GONE;
 import static org.commonjava.indy.service.scheduler.model.version.Versioning.HEADER_INDY_API_VERSION;
 import static org.commonjava.indy.service.scheduler.model.version.Versioning.HEADER_INDY_CUR_API_VERSION;
 import static org.commonjava.indy.service.scheduler.model.version.Versioning.HEADER_INDY_MIN_API_VERSION;
@@ -125,7 +126,7 @@ public class ApiVersioningFilter
 
         if ( deprecatedApiEntry.isPresent() && deprecatedApiEntry.get().isOff() )
         {
-            responseContext.setStatus( SC_GONE ); // Return 410
+            responseContext.setStatus( GONE.getStatusCode() ); // Return 410
         }
 
     }
