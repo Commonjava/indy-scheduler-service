@@ -16,9 +16,6 @@
 package org.commonjava.indy.service.scheduler.model;
 
 import org.commonjava.indy.service.scheduler.data.ScheduleManagerUtils;
-import org.hibernate.search.mapper.pojo.mapping.definition.annotation.FullTextField;
-import org.hibernate.search.mapper.pojo.mapping.definition.annotation.GenericField;
-import org.hibernate.search.mapper.pojo.mapping.definition.annotation.Indexed;
 
 import java.io.Externalizable;
 import java.io.IOException;
@@ -27,20 +24,20 @@ import java.io.ObjectOutput;
 import java.io.Serializable;
 import java.util.Objects;
 
-@Indexed
+//@Indexed
 public class ScheduleKey
         implements Externalizable, Serializable
 {
-    @GenericField
+//    @GenericField
     private String storeKey;
 
-    @GenericField
+//    @GenericField
     private String type;
 
-    @GenericField
+//    @GenericField
     private String name;
 
-    @GenericField
+//    @GenericField
     private String groupName;
 
     public ScheduleKey()

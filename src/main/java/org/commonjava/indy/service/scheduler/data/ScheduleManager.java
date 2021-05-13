@@ -5,6 +5,7 @@ import org.commonjava.indy.service.scheduler.model.Expiration;
 import org.commonjava.indy.service.scheduler.model.ExpirationSet;
 import org.commonjava.indy.service.scheduler.model.ScheduleKey;
 
+import java.util.Map;
 import java.util.Optional;
 
 public interface ScheduleManager
@@ -25,7 +26,7 @@ public interface ScheduleManager
     //
     //    void rescheduleDisableTimeout( final String key )
     //            throws SchedulerException;
-    void schedule( final String key, final String jobType, final String jobName, final Object payload,
+    void schedule( final String key, final String jobType, final String jobName, final Map<String, Object> payload,
                    final int startSeconds )
             throws SchedulerException;
 

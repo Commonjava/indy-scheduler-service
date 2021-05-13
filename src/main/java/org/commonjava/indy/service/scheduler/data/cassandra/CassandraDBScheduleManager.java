@@ -24,21 +24,15 @@ import org.commonjava.indy.service.scheduler.data.ScheduleManager;
 import org.commonjava.indy.service.scheduler.data.ScheduleManagerUtils;
 import org.commonjava.indy.service.scheduler.event.ScheduleEvent;
 import org.commonjava.indy.service.scheduler.exception.SchedulerException;
-import org.commonjava.indy.service.scheduler.model.ContentExpiration;
 import org.commonjava.indy.service.scheduler.model.Expiration;
 import org.commonjava.indy.service.scheduler.model.ExpirationSet;
-import org.commonjava.indy.service.scheduler.model.JobType;
 import org.commonjava.indy.service.scheduler.model.ScheduleKey;
 import org.commonjava.indy.service.scheduler.model.cassandra.DtxSchedule;
-import org.commonjava.indy.service.scheduler.model.spi.pkg.ContentAdvisor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.event.Event;
-import javax.enterprise.inject.Alternative;
-import javax.enterprise.inject.Any;
-import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -47,11 +41,12 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
 /**
- * A ScheduleDBManager is used to do the schedule time out jobs for the ArtifactStore to do some time-related jobs, like
+ * A CassandraDBScheduleManager is used to do the schedule time out jobs to do some time-related jobs, like
  * removing useless artifacts. It used Cassandra to store the schedule info and regularly to check the status to implement this
  * type of function.
  */
@@ -76,15 +71,15 @@ public class CassandraDBScheduleManager
     @Inject
     ScheduleDB scheduleDB;
 
-    @Inject
-    @Any
-    Instance<ContentAdvisor> contentAdvisor;
+//    @Inject
+//    @Any
+//    Instance<ContentAdvisor> contentAdvisor;
 
     @Inject
     Event<ScheduleEvent> eventDispatcher;
 
     @Override
-    public void schedule( final String key, final String jobType, final String jobName, final Object payload,
+    public void schedule( final String key, final String jobType, final String jobName, final Map<String, Object> payload,
                           final int startSeconds )
             throws SchedulerException
     {
@@ -103,7 +98,7 @@ public class CassandraDBScheduleManager
             throw new SchedulerException( "Failed to serialize JSON payload: " + payload, e );
         }
 
-        scheduleDB.createSchedule( key, jobType, jobName, payloadStr, Long.valueOf( startSeconds ) );
+        scheduleDB.createSchedule( key, jobType, jobName, payloadStr, (long) startSeconds );
         logger.debug( "Scheduled for the key {} with timeout: {} seconds", key, startSeconds );
     }
 
@@ -118,20 +113,6 @@ public class CassandraDBScheduleManager
         return Optional.empty();
     }
 
-    @Deprecated
-    public void scheduleContentExpiration( final String key, final String path, final int timeoutSeconds )
-            throws SchedulerException
-    {
-        if ( !isEnabled() )
-        {
-            return;
-        }
-
-        logger.info( "Scheduling timeout for: {} in: {} in: {} seconds (at: {}).", path, key, timeoutSeconds,
-                     new Date( System.currentTimeMillis() + ( timeoutSeconds * 1000 ) ) );
-
-        schedule( key, JobType.CONTENT.getJobType(), path, new ContentExpiration( key, path ), timeoutSeconds );
-    }
 
     @Deprecated
     public Set<DtxSchedule> rescheduleAllBefore( final Collection<DtxSchedule> schedules, final long timeout )
@@ -232,7 +213,7 @@ public class CassandraDBScheduleManager
         {
             Long lifespan = dtxSchedule.getLifespan();
             final long startTimeInMillis = dtxSchedule.getScheduleTime().getTime();
-            return calculateNextExpireTime( lifespan.longValue(), startTimeInMillis );
+            return calculateNextExpireTime( lifespan, startTimeInMillis );
         }
 
         return null;
@@ -527,4 +508,20 @@ public class CassandraDBScheduleManager
     //
     //        return null;
     //    }
+
+    //    @Deprecated
+    //    public void scheduleContentExpiration( final String key, final String path, final int timeoutSeconds )
+    //            throws SchedulerException
+    //    {
+    //        if ( !isEnabled() )
+    //        {
+    //            return;
+    //        }
+    //
+    //        logger.info( "Scheduling timeout for: {} in: {} in: {} seconds (at: {}).", path, key, timeoutSeconds,
+    //                     new Date( System.currentTimeMillis() + ( timeoutSeconds * 1000 ) ) );
+    //
+    //        schedule( key, JobType.CONTENT.getJobType(), path, new ContentExpiration( key, path ), timeoutSeconds );
+    //    }
+
 }

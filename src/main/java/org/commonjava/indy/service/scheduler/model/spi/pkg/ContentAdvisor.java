@@ -17,6 +17,7 @@ package org.commonjava.indy.service.scheduler.model.spi.pkg;
 
 /**
  */
+@Deprecated
 public interface ContentAdvisor
 {
     /**

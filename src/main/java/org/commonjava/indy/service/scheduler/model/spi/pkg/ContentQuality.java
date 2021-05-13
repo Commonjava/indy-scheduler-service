@@ -17,6 +17,7 @@ package org.commonjava.indy.service.scheduler.model.spi.pkg;
 
 /**
  */
+@Deprecated
 public enum ContentQuality
 {
     METADATA, SNAPSHOT, RELEASE

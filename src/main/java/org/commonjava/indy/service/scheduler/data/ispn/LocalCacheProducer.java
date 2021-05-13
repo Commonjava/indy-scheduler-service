@@ -191,12 +191,14 @@ public class LocalCacheProducer
      * Get named cache and verify that the cache obeys our expectations for clustering.
      * There is no way to find out the runtime type of generic type parameters and we need to pass the k/v class types.
      */
+    @Deprecated
     public synchronized <K, V> CacheHandle<K, V> getClusterizableCache( String named, Class<K> kClass, Class<V> vClass )
     {
         verifyClusterizable( kClass, vClass );
         return getCache( named );
     }
 
+    @Deprecated
     private <K, V> void verifyClusterizable( Class<K> kClass, Class<V> vClass )
     {
         if ( !Serializable.class.isAssignableFrom( kClass ) && !Externalizable.class.isAssignableFrom( kClass )
@@ -257,9 +259,9 @@ public class LocalCacheProducer
      * {@link ParserRegistry}
      * {@link ConfigurationManager}
      *
-     * @param cacheMgr
-     * @param config
-     * @param path
+     * @param cacheMgr -
+     * @param config -
+     * @param path -
      */
     private EmbeddedCacheManager mergedCachesFromConfig( EmbeddedCacheManager cacheMgr, String config, String path )
     {
