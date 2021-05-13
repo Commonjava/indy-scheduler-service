@@ -15,6 +15,7 @@
  */
 package org.commonjava.indy.service.scheduler.model;
 
+@Deprecated
 public class ContentExpiration
 {
 

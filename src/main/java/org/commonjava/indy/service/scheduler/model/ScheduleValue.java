@@ -15,24 +15,20 @@
  */
 package org.commonjava.indy.service.scheduler.model;
 
-import org.hibernate.search.mapper.pojo.mapping.definition.annotation.FullTextField;
-import org.hibernate.search.mapper.pojo.mapping.definition.annotation.GenericField;
-import org.hibernate.search.mapper.pojo.mapping.definition.annotation.Indexed;
-
 import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.util.Map;
 
-@Indexed
+//@Indexed
 public class ScheduleValue
         implements Externalizable
 {
-    @GenericField
+//    @GenericField
     private ScheduleKey key;
 
-    @FullTextField
+//    @FullTextField
     private Map<String, Object> dataPayload;
 
     public ScheduleValue()

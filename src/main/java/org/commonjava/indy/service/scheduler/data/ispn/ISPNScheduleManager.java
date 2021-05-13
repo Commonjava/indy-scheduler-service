@@ -20,7 +20,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.quarkus.runtime.Startup;
 import org.commonjava.indy.service.scheduler.data.ScheduleManager;
 import org.commonjava.indy.service.scheduler.data.StandaloneScheduleManager;
-import org.commonjava.indy.service.scheduler.event.ScheduleEvent;
+import org.commonjava.indy.service.scheduler.event.ScheduleTriggerEvent;
+import org.commonjava.indy.service.scheduler.event.kafka.KafkaEventUtils;
 import org.commonjava.indy.service.scheduler.exception.SchedulerException;
 import org.commonjava.indy.service.scheduler.model.ContentExpiration;
 import org.commonjava.indy.service.scheduler.model.Expiration;
@@ -47,7 +48,6 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.event.Event;
 import javax.inject.Inject;
 import java.io.IOException;
 import java.time.Instant;
@@ -88,22 +88,25 @@ public class ISPNScheduleManager
     @Inject
     ObjectMapper objectMapper;
 
-//    @Inject
-//    ScheduleConfiguration schedulerConfig;
-//
-//    @Inject
-//    SearchSession searchSession;
+    //    @Inject
+    //    ScheduleConfiguration schedulerConfig;
+    //
+    //    @Inject
+    //    SearchSession searchSession;
 
     @Inject
     @ScheduleCache
     CacheHandle<ScheduleKey, ScheduleValue> scheduleCache;
 
-//    @Inject
-//    @Any
-//    Instance<ContentAdvisor> contentAdvisor;
+    //    @Inject
+    //    @Any
+    //    Instance<ContentAdvisor> contentAdvisor;
+
+    //    @Inject
+    //    Event<ScheduleEvent> eventDispatcher;
 
     @Inject
-    Event<ScheduleEvent> eventDispatcher;
+    KafkaEventUtils kafkaEvent;
 
     @PostConstruct
     public void init()
@@ -146,8 +149,8 @@ public class ISPNScheduleManager
     }
 
     @Override
-    public void schedule( final String key, final String jobType, final String jobName, final Object payload,
-                          final int startSeconds )
+    public void schedule( final String key, final String jobType, final String jobName,
+                          final Map<String, Object> payload, final int startSeconds )
             throws SchedulerException
     {
         if ( !isEnabled() )
@@ -187,22 +190,6 @@ public class ISPNScheduleManager
         ScheduleKey scheduleKey = new ScheduleKey( key, jobType, jobName );
         removeCache( scheduleKey );
         return Optional.of( scheduleKey );
-    }
-
-    @Deprecated
-    public void scheduleContentExpiration( final String storeKey, final String path, final int timeoutSeconds )
-            throws SchedulerException
-    {
-        if ( !isEnabled() )
-        {
-            logger.debug( "Scheduler disabled." );
-            return;
-        }
-
-        logger.info( "Scheduling timeout for: {} in: {} in: {} seconds (at: {}).", path, storeKey, timeoutSeconds,
-                     new Date( System.currentTimeMillis() + ( timeoutSeconds * 1000L ) ) );
-
-        schedule( storeKey, CONTENT_JOB_TYPE, path, new ContentExpiration( storeKey, path ), timeoutSeconds );
     }
 
     public Set<ScheduleKey> cancelAllBefore( final CacheKeyMatcher<ScheduleKey> matcher, final long timeout )
@@ -467,21 +454,19 @@ public class ISPNScheduleManager
                 final String data = (String) expiredContent.get( ISPNScheduleManager.PAYLOAD );
                 if ( logger.isInfoEnabled() && ISPNScheduleManager.CONTENT_JOB_TYPE.equals( type ) )
                 {
-                    ContentExpiration expiration;
+                    Map<String, Object> expiration;
                     try
                     {
-                        expiration = objectMapper.readValue( data, ContentExpiration.class );
-                        final String key = expiration.getKey();
-                        final String path = expiration.getPath();
-                        logger.info( "Expiring: {} in: {} at: {}.", path, key, new Date( System.currentTimeMillis() ) );
+                        expiration = objectMapper.readValue( data, Map.class );
+                        logger.info( "Expiring: {} at: {}.", expiration, new Date( System.currentTimeMillis() ) );
                     }
                     catch ( final IOException ioe )
                     {
                         // ignore
                     }
                 }
-                //TODO: Implement later using kafka
-                //                fireEvent( eventDispatcher, new SchedulerTriggerEvent( type, data ) );
+                // Implement using kafka
+                kafkaEvent.fireEvent( new ScheduleTriggerEvent( type, data ) );
             }
         }
     }
@@ -773,5 +758,21 @@ public class ISPNScheduleManager
     //            removeCache( new ScheduleKey( storeKey, CONTENT_JOB_TYPE, path ) );
     //            scheduleContentExpiration( storeKey, path, timeout );
     //        }
+    //    }
+
+    //    @Deprecated
+    //    public void scheduleContentExpiration( final String storeKey, final String path, final int timeoutSeconds )
+    //            throws SchedulerException
+    //    {
+    //        if ( !isEnabled() )
+    //        {
+    //            logger.debug( "Scheduler disabled." );
+    //            return;
+    //        }
+    //
+    //        logger.info( "Scheduling timeout for: {} in: {} in: {} seconds (at: {}).", path, storeKey, timeoutSeconds,
+    //                     new Date( System.currentTimeMillis() + ( timeoutSeconds * 1000L ) ) );
+    //
+    //        schedule( storeKey, CONTENT_JOB_TYPE, path, new ContentExpiration( storeKey, path ), timeoutSeconds );
     //    }
 }
