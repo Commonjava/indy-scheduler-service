@@ -36,7 +36,7 @@
     <cassandra.version>3.9.0</cassandra.version>
     <infinispan.version>11.0.8.Final</infinispan.version>
     <agroal.version>1.9</agroal.version>
-    
+
     <byteman.version>4.0.14</byteman.version>
     <skipTests>false</skipTests>
     <plugin.jacoco.skip>false</plugin.jacoco.skip>
@@ -80,6 +80,10 @@
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-resteasy-jackson</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
       <artifactId>quarkus-smallrye-openapi</artifactId>
     </dependency>
     <dependency>
@@ -95,18 +99,18 @@
       <artifactId>quarkus-junit5</artifactId>
       <scope>test</scope>
     </dependency>
-<!--    <dependency>-->
-<!--      <groupId>io.quarkus</groupId>-->
-<!--      <artifactId>quarkus-undertow</artifactId>-->
-<!--    </dependency>-->
+    <!--    <dependency>-->
+    <!--      <groupId>io.quarkus</groupId>-->
+    <!--      <artifactId>quarkus-undertow</artifactId>-->
+    <!--    </dependency>-->
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-smallrye-reactive-messaging-kafka</artifactId>
     </dependency>
-<!--    <dependency>-->
-<!--      <groupId>io.quarkus</groupId>-->
-<!--      <artifactId>quarkus-hibernate-search-orm-elasticsearch</artifactId>-->
-<!--    </dependency>-->
+    <!--    <dependency>-->
+    <!--      <groupId>io.quarkus</groupId>-->
+    <!--      <artifactId>quarkus-hibernate-search-orm-elasticsearch</artifactId>-->
+    <!--    </dependency>-->
 
     <dependency>
       <groupId>io.rest-assured</groupId>

@@ -24,7 +24,7 @@ import javax.ws.rs.core.Application;
 
 import static org.commonjava.indy.service.scheduler.util.Constants.API_PREFIX;
 
-@OpenAPIDefinition( info = @Info( title = "Indy Repository Service APIs", version = "1.0" ) )
+@OpenAPIDefinition( info = @Info( title = "Indy Scheduler Service APIs", version = "1.0" ) )
 @ApplicationPath( API_PREFIX )
 @ApplicationScoped
 public class ServiceApplication

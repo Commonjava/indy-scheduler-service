@@ -22,7 +22,6 @@ import org.commonjava.indy.service.scheduler.config.CassandraConfiguration;
 import org.commonjava.indy.service.scheduler.data.ClusterScheduleManager;
 import org.commonjava.indy.service.scheduler.data.ScheduleManager;
 import org.commonjava.indy.service.scheduler.data.ScheduleManagerUtils;
-import org.commonjava.indy.service.scheduler.event.ScheduleEvent;
 import org.commonjava.indy.service.scheduler.exception.SchedulerException;
 import org.commonjava.indy.service.scheduler.model.Expiration;
 import org.commonjava.indy.service.scheduler.model.ExpirationSet;
@@ -70,13 +69,13 @@ public class CassandraDBScheduleManager
     @Inject
     ScheduleDB scheduleDB;
 
-//    @Inject
-//    @Any
-//    Instance<ContentAdvisor> contentAdvisor;
+    //    @Inject
+    //    @Any
+    //    Instance<ContentAdvisor> contentAdvisor;
 
     @Override
-    public void schedule( final String key, final String jobType, final String jobName, final Map<String, Object> payload,
-                          final int startSeconds )
+    public void schedule( final String key, final String jobType, final String jobName,
+                          final Map<String, Object> payload, final int startSeconds )
             throws SchedulerException
     {
         if ( !isEnabled() )
@@ -105,10 +104,10 @@ public class CassandraDBScheduleManager
         {
             return Optional.empty();
         }
-        //TODO: Not implement!
-        return Optional.empty();
+        return scheduleDB.deleteSchedule( key, jobName ) ?
+                Optional.of( new ScheduleKey( key, jobType, jobName ) ) :
+                Optional.empty();
     }
-
 
     @Deprecated
     public Set<DtxSchedule> rescheduleAllBefore( final Collection<DtxSchedule> schedules, final long timeout )

@@ -52,12 +52,12 @@ public class ScheduleCacheKey2StringMapper
         {
             final StringBuilder builder = new StringBuilder();
             final ScheduleKey scheduleKey = (ScheduleKey) key;
-            if ( scheduleKey.getStoreKey() == null || scheduleKey.getName() == null || scheduleKey.getType() == null )
+            if ( scheduleKey.getKey() == null || scheduleKey.getName() == null || scheduleKey.getType() == null )
             {
                 logger.error(
                         "ScheduleManager cache JDBC store error: ScheduleKey has invalid value for StoreKey or name or type" );
             }
-            builder.append( scheduleKey.getStoreKey() )
+            builder.append( scheduleKey.getKey() )
                    .append( FIELD_SPLITTER )
                    .append( scheduleKey.getType() )
                    .append( FIELD_SPLITTER )
