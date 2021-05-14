@@ -8,9 +8,8 @@ import com.datastax.driver.core.Session;
 import com.datastax.driver.mapping.Mapper;
 import com.datastax.driver.mapping.MappingManager;
 import org.commonjava.indy.service.scheduler.config.CassandraConfiguration;
-import org.commonjava.indy.service.scheduler.data.ispn.LocalCacheProducer;
-import org.commonjava.indy.service.scheduler.data.ispn.RemoteCacheProducer;
 import org.commonjava.indy.service.scheduler.event.ScheduleTriggerEvent;
+import org.commonjava.indy.service.scheduler.event.kafka.KafkaEventUtils;
 import org.commonjava.indy.service.scheduler.model.cassandra.DtxExpiration;
 import org.commonjava.indy.service.scheduler.model.cassandra.DtxSchedule;
 import org.infinispan.counter.api.StrongCounter;
@@ -19,7 +18,6 @@ import org.slf4j.LoggerFactory;
 
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.event.Event;
 import javax.inject.Inject;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -43,10 +41,13 @@ public class ScheduleDB
     CassandraConfiguration cassandraConfig;
 
     @Inject
-    RemoteCacheProducer cacheProducer;
+    ISPNRemoteCounter cacheProducer;
+
+    //    @Inject
+    //    Event<ScheduleTriggerEvent> eventDispatcher;
 
     @Inject
-    Event<ScheduleTriggerEvent> eventDispatcher;
+    KafkaEventUtils kafkaDispatcher;
 
     private final Logger logger = LoggerFactory.getLogger( this.getClass() );
 
@@ -74,7 +75,7 @@ public class ScheduleDB
     {
     }
 
-    public ScheduleDB( CassandraClient client, RemoteCacheProducer cacheProducer )
+    public ScheduleDB( CassandraClient client, ISPNRemoteCounter cacheProducer )
     {
         this.client = client;
         this.cacheProducer = cacheProducer;
@@ -238,7 +239,8 @@ public class ScheduleDB
                     session.execute( boundU );
 
                     logger.debug( "Expired entry: {}", schedule );
-                    eventDispatcher.fire( new ScheduleTriggerEvent( schedule.getJobType(), schedule.getPayload() ) );
+                    kafkaDispatcher.fireEvent(
+                            new ScheduleTriggerEvent( schedule.getJobType(), schedule.getPayload() ) );
                 }
             }
         } );

@@ -83,6 +83,12 @@ cassandra:
   hours:
     offset: 0
 
+ispn:
+  remote:
+    enabled: true
+#    hotrod:
+#      client:
+#        config: /deployment/config/hotrod-client.properties
 
 
 
@@ -128,6 +134,8 @@ cassandra:
 
    ispn:
      configDir: /tmp/infinispan.xml
+     remote:
+       enabled: false
 #     repo-data-pool: |
 #       dataSource.providerClassName=org.postgresql.ds.PGSimpleDataSource,\
 #       dataSource.jdbcUrl=jdbc:postgresql://localhost:5432/test,\

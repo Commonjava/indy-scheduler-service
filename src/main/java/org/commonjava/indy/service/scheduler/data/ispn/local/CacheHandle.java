@@ -13,9 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.commonjava.indy.service.scheduler.data.ispn;
+package org.commonjava.indy.service.scheduler.data.ispn.local;
 
 import org.apache.commons.lang3.StringUtils;
+import org.commonjava.indy.service.scheduler.data.ispn.BasicCacheHandle;
 import org.commonjava.indy.service.scheduler.data.metrics.DefaultMetricsManager;
 import org.infinispan.Cache;
 import org.slf4j.Logger;
