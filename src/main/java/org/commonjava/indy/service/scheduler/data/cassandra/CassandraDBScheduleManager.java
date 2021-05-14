@@ -32,7 +32,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.event.Event;
 import javax.inject.Inject;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -74,9 +73,6 @@ public class CassandraDBScheduleManager
 //    @Inject
 //    @Any
 //    Instance<ContentAdvisor> contentAdvisor;
-
-    @Inject
-    Event<ScheduleEvent> eventDispatcher;
 
     @Override
     public void schedule( final String key, final String jobType, final String jobName, final Map<String, Object> payload,

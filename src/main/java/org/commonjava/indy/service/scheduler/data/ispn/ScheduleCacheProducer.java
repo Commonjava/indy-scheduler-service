@@ -15,6 +15,8 @@
  */
 package org.commonjava.indy.service.scheduler.data.ispn;
 
+import org.commonjava.indy.service.scheduler.data.ispn.local.CacheHandle;
+import org.commonjava.indy.service.scheduler.data.ispn.local.LocalCacheProducer;
 import org.commonjava.indy.service.scheduler.model.ScheduleKey;
 import org.commonjava.indy.service.scheduler.model.ScheduleValue;
 import org.slf4j.Logger;

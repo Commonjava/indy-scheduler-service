@@ -13,11 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.commonjava.indy.service.scheduler.data.ispn;
+package org.commonjava.indy.service.scheduler.data.ispn.local;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
+import org.codehaus.plexus.interpolation.InterpolationException;
+import org.codehaus.plexus.interpolation.PropertiesBasedValueSource;
+import org.codehaus.plexus.interpolation.StringSearchInterpolator;
 import org.commonjava.indy.service.scheduler.config.InfinispanConfiguration;
+import org.commonjava.indy.service.scheduler.config.MetricsConfiguration;
+import org.commonjava.indy.service.scheduler.data.ispn.BasicCacheHandle;
 import org.commonjava.indy.service.scheduler.data.metrics.DefaultMetricsManager;
+import org.commonjava.indy.service.scheduler.data.metrics.NameUtils;
 import org.infinispan.Cache;
 import org.infinispan.commons.marshall.MarshallableTypeHints;
 import org.infinispan.configuration.ConfigurationManager;
@@ -40,16 +47,19 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static org.commonjava.indy.service.scheduler.data.metrics.DefaultMetricsManager.INDY_METRIC_ISPN;
+
 @ApplicationScoped
 @Default
 public class LocalCacheProducer
-        extends AbstractCacheProducer
+
 {
     Logger logger = LoggerFactory.getLogger( getClass() );
 
@@ -64,6 +74,9 @@ public class LocalCacheProducer
 
     @Inject
     DefaultMetricsManager metricsManager;
+
+    @Inject
+    protected MetricsConfiguration metricsConfig;
 
     //    @Inject
     //    MetricsConfiguration metricsConfig;
@@ -108,6 +121,41 @@ public class LocalCacheProducer
     //        clusterCacheManager = startCacheManager( clusterCacheManager, ISPN_CLUSTER_XML, true );
     //    }
 
+
+
+    protected String getCacheMetricPrefix( String named )
+    {
+        return metricsManager == null ?
+                null :
+                NameUtils.getSupername( metricsConfig.getNodePrefix(), INDY_METRIC_ISPN, named );
+    }
+
+    protected String interpolateStrFromStream( InputStream inputStream, String path )
+    {
+        String configuration;
+        try
+        {
+            configuration = IOUtils.toString( inputStream, Charset.defaultCharset() );
+        }
+        catch ( IOException e )
+        {
+            throw new RuntimeException( "Cannot read infinispan configuration from : " + path, e );
+        }
+
+        StringSearchInterpolator interpolator = new StringSearchInterpolator();
+        interpolator.addValueSource( new PropertiesBasedValueSource( System.getProperties() ) );
+
+        try
+        {
+            configuration = interpolator.interpolate( configuration );
+        }
+        catch ( InterpolationException e )
+        {
+            throw new RuntimeException( "Cannot resolve expressions in infinispan configuration from: " + path, e );
+        }
+        return configuration;
+    }
+
     private EmbeddedCacheManager startCacheManager( EmbeddedCacheManager cacheMgr, String configFile,
                                                     Boolean isCluster )
     {
@@ -117,7 +165,7 @@ public class LocalCacheProducer
         // Thread-15 ERROR Unable to register shutdown hook because JVM is shutting down.
         // java.lang.IllegalStateException: Cannot add new shutdown hook as this is not started. Current state: STOPPED
         //
-        new MarshallableTypeHints().getBufferSizePredictor( LocalCacheHandle.class );
+        new MarshallableTypeHints().getBufferSizePredictor( CacheHandle.class );
 
         File confDir = ispnConfig.getInfinispanConfigDir();
         File ispnConf = new File( confDir, configFile );
