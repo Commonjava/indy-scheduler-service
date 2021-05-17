@@ -92,10 +92,6 @@ public class CassandraConfiguration
     @ConfigProperty( name = "cassandra.hours.offset", defaultValue = "0" )
     int offsetHours;
 
-    public CassandraConfiguration()
-    {
-    }
-
     public Boolean isEnabled()
     {
         return enabled;

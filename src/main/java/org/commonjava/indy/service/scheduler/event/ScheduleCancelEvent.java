@@ -30,6 +30,6 @@ public class ScheduleCancelEvent
     @Override
     public ScheduleEventType getEventType()
     {
-        return ScheduleEventType.Cancel;
+        return ScheduleEventType.CANCEL;
     }
 }

@@ -66,6 +66,10 @@ import java.util.stream.Collectors;
 import static java.util.Optional.empty;
 import static java.util.Optional.of;
 
+/**
+ * This ISPNScheduleManager is only used for local dev mode. It uses Infinispan expiration mechanism to implement the scheduler
+ * function.
+ */
 @SuppressWarnings( "RedundantThrows" )
 @ApplicationScoped
 @StandaloneScheduleManager
@@ -86,11 +90,11 @@ public class ISPNScheduleManager
 
     public static final String SCHEDULE_TIME = "SCHEDULE_TIME";
 
+    @Deprecated
     public static final String SCHEDULE_UUID = "SCHEDULE_UUID";
 
     @Inject
     ObjectMapper objectMapper;
-
 
     @Inject
     @ScheduleCache

@@ -30,6 +30,6 @@ public class ScheduleTriggerEvent
     @Override
     public ScheduleEventType getEventType()
     {
-        return ScheduleEventType.Trigger;
+        return ScheduleEventType.TRIGGER;
     }
 }

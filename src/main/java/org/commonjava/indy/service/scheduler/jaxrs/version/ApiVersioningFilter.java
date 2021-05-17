@@ -76,10 +76,6 @@ public class ApiVersioningFilter
     @Inject
     DeprecatedApis indyDeprecatedApis;
 
-    public ApiVersioningFilter()
-    {
-    }
-
     @Override
     public void filter( ContainerRequestContext requestContext )
             throws IOException

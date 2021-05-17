@@ -25,7 +25,7 @@ import java.text.MessageFormat;
  * the default: HTTP 500).
  */
 public class IndyWorkflowException
-    extends Exception
+        extends Exception
 {
     private Object[] params;
 
@@ -73,7 +73,7 @@ public class IndyWorkflowException
             }
             else
             {
-                for(int i=0; i<params.length; i++)
+                for ( int i = 0; i < params.length; i++ )
                 {
                     if ( params[i] == null )
                     {
@@ -101,11 +101,6 @@ public class IndyWorkflowException
                     {
                         formattedMessage = format;
                     }
-                }
-
-                if ( formattedMessage == null )
-                {
-                    formattedMessage = format;
                 }
             }
         }
