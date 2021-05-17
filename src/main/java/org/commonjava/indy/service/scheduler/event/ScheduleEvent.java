@@ -15,16 +15,30 @@
  */
 package org.commonjava.indy.service.scheduler.event;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.commonjava.event.common.IndyEvent;
+
 public abstract class ScheduleEvent
+        extends IndyEvent
 {
-    
+
+    @JsonProperty( "job_type" )
     private final String jobType;
-    
+
+    @JsonProperty( "job_name" )
+    private final String jobName;
+
+    @JsonProperty( "payload" )
     private final String payload;
-    
-    public ScheduleEvent( final String jobType, final String payload )
+
+    @JsonCreator
+    public ScheduleEvent( @JsonProperty( "job_type" ) final String jobType,
+                          @JsonProperty( "job_name" ) final String jobName,
+                          @JsonProperty( "payload" ) final String payload )
     {
         this.jobType = jobType;
+        this.jobName = jobName;
         this.payload = payload;
     }
 
@@ -33,15 +47,24 @@ public abstract class ScheduleEvent
         return jobType;
     }
 
+    public String getJobName()
+    {
+        return jobName;
+    }
+
     public String getPayload()
     {
         return payload;
     }
 
+    @JsonProperty( "eventType" )
+    public abstract ScheduleEventType getEventType();
+
     @Override
     public String toString()
     {
-        return String.format( "SchedulerEvent [eventType=%s, jobType=%s, payload=%s]", getClass().getName(), jobType, payload );
+        return String.format( "SchedulerEvent [eventType=%s, jobType=%s, payload=%s]", getClass().getName(), jobType,
+                              payload );
     }
 
 }
