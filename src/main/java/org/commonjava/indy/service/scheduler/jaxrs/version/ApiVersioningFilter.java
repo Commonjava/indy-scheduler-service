@@ -80,11 +80,6 @@ public class ApiVersioningFilter
     {
     }
 
-    public ApiVersioningFilter( Versioning versioning )
-    {
-        this.indyVersioning = versioning;
-    }
-
     @Override
     public void filter( ContainerRequestContext requestContext )
             throws IOException

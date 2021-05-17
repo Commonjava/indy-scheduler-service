@@ -91,22 +91,10 @@ public class ISPNScheduleManager
     @Inject
     ObjectMapper objectMapper;
 
-    //    @Inject
-    //    ScheduleConfiguration schedulerConfig;
-    //
-    //    @Inject
-    //    SearchSession searchSession;
 
     @Inject
     @ScheduleCache
     CacheHandle<ScheduleKey, ScheduleValue> scheduleCache;
-
-    //    @Inject
-    //    @Any
-    //    Instance<ContentAdvisor> contentAdvisor;
-
-    //    @Inject
-    //    Event<ScheduleEvent> eventDispatcher;
 
     @Inject
     KafkaEventUtils kafkaEvent;

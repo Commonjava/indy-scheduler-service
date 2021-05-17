@@ -6,6 +6,13 @@
             xmlns:jdbc="urn:infinispan:config:store:jdbc:11.0">
 
   <cache-container default-cache="local" name="IndyScheduleCacheManager" shutdown-hook="DEFAULT" statistics="true">
+
+    <serialization marshaller="org.infinispan.commons.marshall.JavaSerializationMarshaller">
+      <white-list>
+        <class>org.commonjava.indy.service.scheduler.model.ScheduleKey</class>
+      </white-list>
+    </serialization>
+
     <local-cache-configuration name="local-template" statistics="true">
       <!--
           Limits the cache to this by the amount of entries in the cache.
