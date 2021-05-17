@@ -63,6 +63,9 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
+
 @SuppressWarnings( "RedundantThrows" )
 @ApplicationScoped
 @StandaloneScheduleManager
@@ -185,11 +188,10 @@ public class ISPNScheduleManager
         if ( !isEnabled() )
         {
             logger.debug( "Scheduler disabled." );
-            return Optional.empty();
+            return empty();
         }
         ScheduleKey scheduleKey = new ScheduleKey( key, jobType, jobName );
-        removeCache( scheduleKey );
-        return Optional.of( scheduleKey );
+        return removeCache( scheduleKey ) == null ? empty() : of( scheduleKey );
     }
 
     public Set<ScheduleKey> cancelAllBefore( final CacheKeyMatcher<ScheduleKey> matcher, final long timeout )
@@ -389,9 +391,9 @@ public class ISPNScheduleManager
         return "#" + jobType;
     }
 
-    private void removeCache( final ScheduleKey cacheKey )
+    private ScheduleValue removeCache( final ScheduleKey cacheKey )
     {
-        scheduleCache.remove( cacheKey );
+        return scheduleCache.remove( cacheKey );
     }
 
     @CacheEntryCreated

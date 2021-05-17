@@ -22,7 +22,6 @@ import org.codehaus.plexus.interpolation.PropertiesBasedValueSource;
 import org.codehaus.plexus.interpolation.StringSearchInterpolator;
 import org.commonjava.indy.service.scheduler.config.InfinispanConfiguration;
 import org.commonjava.indy.service.scheduler.config.MetricsConfiguration;
-import org.commonjava.indy.service.scheduler.data.ispn.BasicCacheHandle;
 import org.commonjava.indy.service.scheduler.data.metrics.DefaultMetricsManager;
 import org.commonjava.indy.service.scheduler.data.metrics.NameUtils;
 import org.infinispan.Cache;
@@ -30,7 +29,6 @@ import org.infinispan.commons.marshall.MarshallableTypeHints;
 import org.infinispan.configuration.ConfigurationManager;
 import org.infinispan.configuration.parsing.ConfigurationBuilderHolder;
 import org.infinispan.configuration.parsing.ParserRegistry;
-import org.infinispan.counter.api.StrongCounter;
 import org.infinispan.manager.DefaultCacheManager;
 import org.infinispan.manager.EmbeddedCacheManager;
 import org.slf4j.Logger;
@@ -42,11 +40,9 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Default;
 import javax.inject.Inject;
 import java.io.ByteArrayInputStream;
-import java.io.Externalizable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.Serializable;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -65,8 +61,6 @@ public class LocalCacheProducer
 
     private static final String ISPN_XML = "infinispan.xml";
 
-    //    private static final String ISPN_CLUSTER_XML = "infinispan-cluster.xml";
-
     private EmbeddedCacheManager cacheManager;
 
     @Inject
@@ -76,19 +70,9 @@ public class LocalCacheProducer
     DefaultMetricsManager metricsManager;
 
     @Inject
-    protected MetricsConfiguration metricsConfig;
+    MetricsConfiguration metricsConfig;
 
-    //    @Inject
-    //    MetricsConfiguration metricsConfig;
-
-    //    @Inject
-    //    ScheduleConfiguration scheduleConfig;
-
-    //    private EmbeddedCacheManager clusterCacheManager;
-
-    private final Map<String, CacheHandle> caches = new ConcurrentHashMap<>(); // hold embedded and remote caches
-
-    private final Map<String, StrongCounter> counters = new ConcurrentHashMap<>();
+    private final Map<String, CacheHandle> caches = new ConcurrentHashMap<>(); // hold embedded caches
 
     protected LocalCacheProducer()
     {
@@ -110,18 +94,6 @@ public class LocalCacheProducer
     {
         cacheManager = startCacheManager( cacheManager, ISPN_XML, false );
     }
-
-    //    private void startClusterManager()
-    //    {
-    //        if ( clusterConfiguration == null || !clusterConfiguration.isEnabled() )
-    //        {
-    //            logger.info( "Infinispan cluster configuration not enabled. Skip." );
-    //            return;
-    //        }
-    //        clusterCacheManager = startCacheManager( clusterCacheManager, ISPN_CLUSTER_XML, true );
-    //    }
-
-
 
     protected String getCacheMetricPrefix( String named )
     {
@@ -227,36 +199,6 @@ public class LocalCacheProducer
     }
 
     /**
-     * Get a BasicCache instance. If the remote cache is enabled, it will match the named with remote.patterns.
-     * If matched, it will create/return a RemoteCache. If not matched, an embedded cache will be created/returned to the caller.
-     */
-    public synchronized <K, V> BasicCacheHandle<K, V> getBasicCache( String named )
-    {
-        return getCache( named );
-    }
-
-    /**
-     * Get named cache and verify that the cache obeys our expectations for clustering.
-     * There is no way to find out the runtime type of generic type parameters and we need to pass the k/v class types.
-     */
-    @Deprecated
-    public synchronized <K, V> CacheHandle<K, V> getClusterizableCache( String named, Class<K> kClass, Class<V> vClass )
-    {
-        verifyClusterizable( kClass, vClass );
-        return getCache( named );
-    }
-
-    @Deprecated
-    private <K, V> void verifyClusterizable( Class<K> kClass, Class<V> vClass )
-    {
-        if ( !Serializable.class.isAssignableFrom( kClass ) && !Externalizable.class.isAssignableFrom( kClass )
-                || !Serializable.class.isAssignableFrom( vClass ) && !Externalizable.class.isAssignableFrom( vClass ) )
-        {
-            throw new RuntimeException( kClass + " or " + vClass + " is not Serializable/Externalizable" );
-        }
-    }
-
-    /**
      * Retrieve an embedded cache with a pre-defined configuration (from infinispan.xml) or the default cache configuration.
      */
     public synchronized <K, V> CacheHandle<K, V> getCache( String named )
@@ -285,11 +227,6 @@ public class LocalCacheProducer
             cacheManager = null;
         }
 
-        //        if ( clusterCacheManager != null )
-        //        {
-        //            clusterCacheManager.stop();
-        //            clusterCacheManager = null;
-        //        }
     }
 
     /**
@@ -350,11 +287,6 @@ public class LocalCacheProducer
         }
 
         return mgr;
-    }
-
-    public EmbeddedCacheManager getCacheManager()
-    {
-        return cacheManager;
     }
 
 }

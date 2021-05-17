@@ -5,6 +5,8 @@ import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
+import com.datastax.driver.core.querybuilder.BuiltStatement;
+import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.mapping.Mapper;
 import com.datastax.driver.mapping.MappingManager;
 import org.commonjava.indy.service.scheduler.config.CassandraConfiguration;
@@ -30,6 +32,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+
+import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
 
 @ApplicationScoped
 public class ScheduleDB
@@ -69,6 +73,7 @@ public class ScheduleDB
 
     private PreparedStatement preparedScheduleByStoreKeyAndTypeQuery;
 
+
     ScheduledExecutorService service = Executors.newSingleThreadScheduledExecutor();
 
     public ScheduleDB()
@@ -86,7 +91,7 @@ public class ScheduleDB
     public void init()
     {
 
-        String keyspace = cassandraConfig.getScheduleKeyspace();
+        final String keyspace = cassandraConfig.getScheduleKeyspace();
 
         session = client.getSession( keyspace );
 
@@ -197,15 +202,32 @@ public class ScheduleDB
         return new Date( scheduleTime.getTime() + 1000 * timeout );
     }
 
-    public DtxSchedule querySchedule( String storeKey, String jobName )
+    public DtxSchedule querySchedule( String key, String jobName )
     {
-        BoundStatement bound = preparedSingleScheduleQuery.bind( storeKey, jobName );
+        BoundStatement bound = preparedSingleScheduleQuery.bind( key, jobName );
         ResultSet resultSet = session.execute( bound );
 
         Row row = resultSet.one();
 
         return toDtxSchedule( row );
+    }
 
+    public boolean deleteSchedule( String key, String jobName )
+    {
+        final String keyspace = cassandraConfig.getScheduleKeyspace();
+        BuiltStatement deleteStmt = QueryBuilder.delete()
+                                                .from( keyspace + "." + ScheduleDBUtil.TABLE_SCHEDULE )
+                                                .where( eq( "storekey", key ) )
+                                                .and( eq( "jobname", jobName ) );
+        try
+        {
+            session.execute( deleteStmt );
+            return true;
+        }
+        catch ( Exception e )
+        {
+            return false;
+        }
     }
 
     public Collection<DtxExpiration> queryExpirations( Date date )

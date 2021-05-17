@@ -15,35 +15,125 @@
  */
 package org.commonjava.indy.service.scheduler.jaxrs;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.smallrye.mutiny.Uni;
+import org.commonjava.indy.service.scheduler.controller.SchedulerController;
+import org.commonjava.indy.service.scheduler.exception.SchedulerException;
+import org.commonjava.indy.service.scheduler.model.ScheduleKey;
 
 import javax.enterprise.context.ApplicationScoped;
+import javax.inject.Inject;
+import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
+import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.SecurityContext;
+import java.util.Optional;
+
+import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
+import static javax.ws.rs.core.Response.Status.INTERNAL_SERVER_ERROR;
+import static javax.ws.rs.core.Response.Status.NOT_FOUND;
 
 @ApplicationScoped
 @Path( "/schedule" )
 public class SchedulerResource
 {
+    @Inject
+    SchedulerController controller;
+
     @GET
-    public Uni<Response> get()
+    @Produces( APPLICATION_JSON )
+    public Uni<Response> get( final @Context SecurityContext securityContext )
     {
         return Uni.createFrom().item( Response.status( Response.Status.METHOD_NOT_ALLOWED ).build() );
     }
 
     @POST
-    public Uni<Response> schedule()
+    @Consumes( APPLICATION_JSON )
+    @Produces( APPLICATION_JSON )
+    public Uni<Response> schedule( final SchedulerInfo schedulerInfo, final @Context SecurityContext securityContext )
     {
-        return Uni.createFrom().item( Response.status( Response.Status.METHOD_NOT_ALLOWED ).build() );
+        return doSchedule( schedulerInfo );
+    }
+
+    @PUT
+    @Consumes( APPLICATION_JSON )
+    @Produces( APPLICATION_JSON )
+    public Uni<Response> reschedule( final SchedulerInfo schedulerInfo, final @Context SecurityContext securityContext )
+    {
+        return doSchedule( schedulerInfo );
+    }
+
+    private Uni<Response> doSchedule( final SchedulerInfo schedulerInfo )
+    {
+        Response response;
+        try
+        {
+            controller.schedule( schedulerInfo );
+            response = Response.status( Response.Status.CREATED ).build();
+        }
+        catch ( SchedulerException e )
+        {
+            response = Response.status( INTERNAL_SERVER_ERROR )
+                               .entity( new ErrorResponseInfo( String.valueOf( INTERNAL_SERVER_ERROR.getStatusCode() ),
+                                                               e.getMessage() ) )
+                               .build();
+        }
+        return Uni.createFrom().item( response );
     }
 
     @DELETE
-    public Uni<Response> cancel()
+    @Produces( APPLICATION_JSON )
+    public Uni<Response> cancel( @QueryParam( "key" ) final String key, @QueryParam( "job_type" ) final String jobType,
+                                 @QueryParam( "job_name" ) final String jobName,
+                                 final @Context SecurityContext securityContext )
     {
-        return Uni.createFrom().item( Response.status( Response.Status.METHOD_NOT_ALLOWED ).build() );
+        Response response;
+        final ScheduleKey scheduleKey = new ScheduleKey( key, jobType, jobName );
+        Optional<ScheduleKey> scheduledKey = controller.cancel( scheduleKey );
+        if ( scheduledKey.isPresent() )
+        {
+            response = Response.noContent().build();
+        }
+        else
+        {
+            response = Response.status( NOT_FOUND ).build();
+        }
+        return Uni.createFrom().item( response );
+    }
+
+    private static class ErrorResponseInfo
+    {
+        @JsonProperty( "status_code" )
+        private final String statusCode;
+
+        @JsonProperty( "reason" )
+        private final String reason;
+
+        @JsonCreator
+        ErrorResponseInfo( @JsonProperty( "status_code" ) final String statusCode,
+                           @JsonProperty( "reason" ) final String reason )
+        {
+            this.statusCode = statusCode;
+            this.reason = reason;
+        }
+
+        public String getStatusCode()
+        {
+            return statusCode;
+        }
+
+        public String getReason()
+        {
+            return reason;
+        }
     }
 
 }

@@ -29,7 +29,7 @@ public class ScheduleKey
         implements Externalizable, Serializable
 {
 //    @GenericField
-    private String storeKey;
+    private String key;
 
 //    @GenericField
     private String type;
@@ -46,15 +46,15 @@ public class ScheduleKey
 
     public ScheduleKey( final String storeKey, final String type, final String name )
     {
-        this.storeKey = storeKey;
+        this.key = storeKey;
         this.type = type;
         this.name = name;
-        this.groupName = ScheduleManagerUtils.groupName( this.storeKey, this.type );
+        this.groupName = ScheduleManagerUtils.groupName( this.key, this.type );
     }
 
-    public String getStoreKey()
+    public String getKey()
     {
-        return storeKey;
+        return key;
     }
 
     public String getType()
@@ -87,7 +87,7 @@ public class ScheduleKey
         }
 
         final ScheduleKey that = (ScheduleKey) obj;
-        return Objects.equals( this.storeKey, that.storeKey ) && Objects.equals( this.type, that.type )
+        return Objects.equals( this.key, that.key ) && Objects.equals( this.type, that.type )
                 && Objects.equals( this.name, that.name );
     }
 
@@ -96,7 +96,7 @@ public class ScheduleKey
     {
         final int prime = 31;
         int result = 1;
-        result = prime * result + ( ( storeKey == null ) ? 0 : storeKey.hashCode() );
+        result = prime * result + ( ( key == null ) ? 0 : key.hashCode() );
         result = prime * result + ( ( type == null ) ? 0 : type.hashCode() );
         result = prime * result + ( ( name == null ) ? 0 : name.hashCode() );
         return result;
@@ -104,7 +104,7 @@ public class ScheduleKey
 
     public String toStringKey()
     {
-        return ( storeKey != null ? storeKey.toString() : "" ) + "#" + type + "#" + name;
+        return ( key != null ? key.toString() : "" ) + "#" + type + "#" + name;
     }
 
     public String toString()
@@ -114,14 +114,14 @@ public class ScheduleKey
 
     public boolean exists()
     {
-        return this.storeKey != null && this.type != null;
+        return this.key != null && this.type != null;
     }
 
     @Override
     public void writeExternal( ObjectOutput out )
             throws IOException
     {
-        out.writeObject( storeKey );
+        out.writeObject( key );
         out.writeObject( type );
         out.writeObject( name );
     }
@@ -130,7 +130,7 @@ public class ScheduleKey
     public void readExternal( ObjectInput in )
             throws IOException, ClassNotFoundException
     {
-        storeKey = (String) in.readObject();
+        key = (String) in.readObject();
 
         final String typeStr = (String) in.readObject();
         type = "".equals( typeStr ) ? null : typeStr;
@@ -138,6 +138,6 @@ public class ScheduleKey
         final String nameStr = (String) in.readObject();
         name = "".equals( nameStr ) ? null : nameStr;
 
-        groupName = ScheduleManagerUtils.groupName( storeKey, type );
+        groupName = ScheduleManagerUtils.groupName( key, type );
     }
 }
