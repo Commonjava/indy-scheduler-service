@@ -3,12 +3,12 @@ package org.commonjava.indy.service.scheduler.model;
 public enum JobType
 {
 
-    CONTENT ("CONTENT"),
-    DisabledTIMEOUT ("Diabled-timeout");
+    CONTENT( "CONTENT" ),
+    DISABLED_TIMEOUT( "Diabled-timeout" );
 
     private final String jobType;
 
-    private JobType( String jobType )
+    JobType( String jobType )
     {
         this.jobType = jobType;
     }

@@ -30,6 +30,6 @@ public class ScheduleCreateEvent
     @Override
     public ScheduleEventType getEventType()
     {
-        return ScheduleEventType.Create;
+        return ScheduleEventType.CREATE;
     }
 }

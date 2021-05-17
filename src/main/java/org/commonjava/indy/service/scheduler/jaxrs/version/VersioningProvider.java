@@ -69,11 +69,12 @@ public class VersioningProvider
                     e );
         }
 
-        versioning =
-                new Versioning( props.getProperty( "version", "unknown" ), props.getProperty( "builder", "unknown" ),
-                                props.getProperty( "commit.id", "unknown" ),
-                                props.getProperty( "timestamp", "unknown" ),
-                                props.getProperty( "api-version", "unknown" ) );
+        final String UNKNOWN = "unknown";
+
+        versioning = new Versioning( props.getProperty( "version", UNKNOWN ), props.getProperty( "builder", UNKNOWN ),
+                                     props.getProperty( "commit.id", UNKNOWN ),
+                                     props.getProperty( "timestamp", UNKNOWN ),
+                                     props.getProperty( "api-version", UNKNOWN ) );
 
         // Load deprecated-apis
         String deprecatedApiFile = System.getProperty( "ENV_DEPRECATED_API_FILE", INDY_DEPRECATED_APIS_PROPERTIES );
