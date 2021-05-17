@@ -32,7 +32,7 @@ public class SchedulerController
     private final Logger logger = LoggerFactory.getLogger( getClass() );
 
     @Inject
-    private ScheduleManager scheduleManager;
+    ScheduleManager scheduleManager;
 
     protected SchedulerController()
     {
