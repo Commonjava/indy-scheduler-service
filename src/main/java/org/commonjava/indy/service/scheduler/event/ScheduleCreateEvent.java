@@ -15,11 +15,21 @@
  */
 package org.commonjava.indy.service.scheduler.event;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class ScheduleCreateEvent
         extends ScheduleEvent
 {
-    public ScheduleCreateEvent( final String jobType, final String payload )
+    public ScheduleCreateEvent( @JsonProperty( "job_type" ) final String jobType,
+                                @JsonProperty( "job_name" ) final String jobName,
+                                @JsonProperty( "payload" ) final String payload )
     {
-        super( jobType, payload );
+        super( jobType, jobName, payload );
+    }
+
+    @Override
+    public ScheduleEventType getEventType()
+    {
+        return ScheduleEventType.Create;
     }
 }

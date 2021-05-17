@@ -73,7 +73,6 @@ public class ScheduleDB
 
     private PreparedStatement preparedScheduleByStoreKeyAndTypeQuery;
 
-
     ScheduledExecutorService service = Executors.newSingleThreadScheduledExecutor();
 
     public ScheduleDB()
@@ -261,8 +260,8 @@ public class ScheduleDB
                     session.execute( boundU );
 
                     logger.debug( "Expired entry: {}", schedule );
-                    kafkaDispatcher.fireEvent(
-                            new ScheduleTriggerEvent( schedule.getJobType(), schedule.getPayload() ) );
+                    kafkaDispatcher.fireEvent( new ScheduleTriggerEvent( schedule.getJobType(), schedule.getJobName(),
+                                                                         schedule.getPayload() ) );
                 }
             }
         } );

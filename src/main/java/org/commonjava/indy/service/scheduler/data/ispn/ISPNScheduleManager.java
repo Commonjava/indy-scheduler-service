@@ -468,7 +468,7 @@ public class ISPNScheduleManager
                     }
                 }
                 // Implement using kafka
-                kafkaEvent.fireEvent( new ScheduleTriggerEvent( type, data ) );
+                kafkaEvent.fireEvent( new ScheduleTriggerEvent( type, expiredKey.getName(), data ) );
             }
         }
     }
