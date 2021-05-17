@@ -59,7 +59,7 @@ pipeline {
             }
         }
         stage('Deploy') {
-            when { branch 'master' }
+            when { branch 'main' }
             steps {
                 echo "Deploy"
                 sh '${M2_HOME}/bin/mvn help:effective-settings -B -V clean deploy -e -DskipTests'
