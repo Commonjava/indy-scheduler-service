@@ -109,30 +109,6 @@ public class CassandraDBScheduleManager
                 Optional.empty();
     }
 
-    @Deprecated
-    public Set<DtxSchedule> rescheduleAllBefore( final Collection<DtxSchedule> schedules, final long timeout )
-    {
-
-        if ( !isEnabled() )
-        {
-            return Collections.emptySet();
-        }
-
-        final Set<DtxSchedule> rescheduled = new HashSet<>();
-
-        final Date to = new Date( System.currentTimeMillis() + ( timeout * 1000 ) );
-        schedules.forEach( schedule -> {
-            final Date nextFire = getNextExpireTime( schedule );
-            if ( nextFire == null || !nextFire.after( to ) )
-            {
-                rescheduled.add( schedule );
-            }
-        } );
-
-        return rescheduled;
-
-    }
-
     @Override
     public Expiration findSingleExpiration( final String key, final String jobType )
     {
@@ -174,31 +150,10 @@ public class CassandraDBScheduleManager
         return new ExpirationSet( expirations );
     }
 
-    public ExpirationSet findMatchingExpirations( final String key, final String jobType )
+    private Expiration toExpiration( final DtxSchedule dtxSchedule )
     {
-        if ( !cassandraConfig.isEnabled() )
-        {
-            logger.debug( "Cassandra scheduler disabled." );
-            return null;
-        }
-
-        final Collection<DtxSchedule> schedules = scheduleDB.querySchedules( key, jobType, Boolean.FALSE );
-        Set<Expiration> expirations = new HashSet<>( schedules.size() );
-        if ( !schedules.isEmpty() )
-        {
-            for ( DtxSchedule schedule : schedules )
-            {
-                expirations.add( toExpiration( schedule ) );
-            }
-        }
-
-        return new ExpirationSet( expirations );
-    }
-
-    private Expiration toExpiration( final DtxSchedule schedule )
-    {
-        return new Expiration( ScheduleManagerUtils.groupName( schedule.getStoreKey(), schedule.getJobType() ),
-                               schedule.getJobName(), getNextExpireTime( schedule ) );
+        return new Expiration( ScheduleManagerUtils.groupName( dtxSchedule.getStoreKey(), dtxSchedule.getJobType() ),
+                               dtxSchedule.getJobName(), getNextExpireTime( dtxSchedule ) );
     }
 
     private Date getNextExpireTime( final DtxSchedule dtxSchedule )
@@ -240,283 +195,49 @@ public class CassandraDBScheduleManager
         return true;
     }
 
-    //    @Override
-    //    public String getId()
-    //    {
-    //        return "Indy ScheduleDB";
-    //    }
-    //
-    //    @Override
-    //    public int getShutdownPriority()
-    //    {
-    //        return 95;
-    //    }
+    @Deprecated
+    public ExpirationSet findMatchingExpirations( final String key, final String jobType )
+    {
+        if ( !cassandraConfig.isEnabled() )
+        {
+            logger.debug( "Cassandra scheduler disabled." );
+            return null;
+        }
 
-    //    public void rescheduleSnapshotTimeouts( final HostedRepository deploy )
-    //            throws SchedulerException
-    //    {
-    //        if ( !isEnabled() )
-    //        {
-    //            return;
-    //        }
-    //
-    //        int timeout = -1;
-    //        if ( deploy.isAllowSnapshots() && deploy.getSnapshotTimeoutSeconds() > 0 )
-    //        {
-    //            timeout = deploy.getSnapshotTimeoutSeconds();
-    //        }
-    //
-    //        if ( timeout > 0 )
-    //        {
-    //
-    //            final Collection<DtxSchedule> schedules =
-    //                    scheduleDB.querySchedules( deploy.getKey().toString(), JobType.CONTENT.getJobType(),
-    //                                               Boolean.FALSE );
-    //
-    //            final Set<DtxSchedule> rescheduled = rescheduleAllBefore( schedules, timeout );
-    //
-    //            for ( DtxSchedule schedule : rescheduled )
-    //            {
-    //                scheduleContentExpiration( StoreKey.fromString( schedule.getStoreKey() ), schedule.getJobName(),
-    //                                           timeout );
-    //            }
-    //        }
-    //    }
-    //
-    //    public void rescheduleProxyTimeouts( final RemoteRepository repo )
-    //            throws SchedulerException
-    //    {
-    //        if ( !isEnabled() )
-    //        {
-    //            return;
-    //        }
-    //
-    //        int timeout = -1;
-    //        if ( !repo.isPassthrough() && repo.getCacheTimeoutSeconds() > 0 )
-    //        {
-    //            timeout = repo.getCacheTimeoutSeconds();
-    //        }
-    //        else if ( repo.isPassthrough() )
-    //        {
-    //            timeout = config.getPassthroughTimeoutSeconds();
-    //        }
-    //
-    //        if ( timeout > 0 )
-    //        {
-    //
-    //            final Collection<DtxSchedule> schedules =
-    //                    scheduleDB.querySchedules( repo.getKey().toString(), JobType.CONTENT.getJobType(), Boolean.FALSE );
-    //
-    //            final Set<DtxSchedule> rescheduled = rescheduleAllBefore( schedules, timeout );
-    //
-    //            for ( DtxSchedule schedule : rescheduled )
-    //            {
-    //                scheduleContentExpiration( StoreKey.fromString( schedule.getStoreKey() ), schedule.getJobName(),
-    //                                           timeout );
-    //            }
-    //
-    //        }
-    //    }
-    //
-    //    public void setProxyTimeouts( final StoreKey key, final String path )
-    //            throws SchedulerException
-    //    {
-    //        if ( !isEnabled() )
-    //        {
-    //            return;
-    //        }
-    //
-    //        RemoteRepository repo = null;
-    //        try
-    //        {
-    //            repo = (RemoteRepository) dataManager.getArtifactStore( key );
-    //        }
-    //        catch ( final IndyDataException e )
-    //        {
-    //            logger.error( String.format( "Failed to retrieve store for: %s. Reason: %s", key, e.getMessage() ), e );
-    //        }
-    //
-    //        if ( repo == null )
-    //        {
-    //            return;
-    //        }
-    //
-    //        int timeout = config.getPassthroughTimeoutSeconds();
-    //        final ConcreteResource resource = new ConcreteResource( LocationUtils.toLocation( repo ), path );
-    //        final SpecialPathInfo info = specialPathManager.getSpecialPathInfo( resource, key.getPackageType() );
-    //        if ( !repo.isPassthrough() )
-    //        {
-    //            if ( ( info != null && info.isMetadata() ) && repo.getMetadataTimeoutSeconds() >= 0 )
-    //            {
-    //                if ( repo.getMetadataTimeoutSeconds() == 0 )
-    //                {
-    //                    logger.debug( "Using default metadata timeout for: {}", resource );
-    //                    timeout = config.getRemoteMetadataTimeoutSeconds();
-    //                }
-    //                else
-    //                {
-    //                    logger.debug( "Using metadata timeout for: {}", resource );
-    //                    timeout = repo.getMetadataTimeoutSeconds();
-    //                }
-    //            }
-    //            else
-    //            {
-    //                if ( info == null )
-    //                {
-    //                    logger.debug( "No special path info for: {}", resource );
-    //                }
-    //                else
-    //                {
-    //                    logger.debug( "{} is a special path, but not metadata.", resource );
-    //                }
-    //
-    //                timeout = repo.getCacheTimeoutSeconds();
-    //            }
-    //        }
-    //
-    //        if ( timeout > 0 )
-    //        {
-    //            //            logger.info( "[PROXY TIMEOUT SET] {}/{}; {}", repo.getKey(), path, new Date( System.currentTimeMillis()
-    //            //                + timeout ) );
-    //
-    //            scheduleContentExpiration( key, path, timeout );
-    //        }
-    //    }
+        final Collection<DtxSchedule> schedules = scheduleDB.querySchedules( key, jobType, Boolean.FALSE );
+        Set<Expiration> expirations = new HashSet<>( schedules.size() );
+        if ( !schedules.isEmpty() )
+        {
+            for ( DtxSchedule schedule : schedules )
+            {
+                expirations.add( toExpiration( schedule ) );
+            }
+        }
 
-    //    public void setSnapshotTimeouts( final String key, final String path )
-    //            throws SchedulerException
-    //    {
-    //        if ( !isEnabled() )
-    //        {
-    //            return;
-    //        }
-    //
-    //        HostedRepository deploy = null;
-    //        try
-    //        {
-    //            final ArtifactStore store = dataManager.getArtifactStore( key );
-    //            if ( store == null )
-    //            {
-    //                return;
-    //            }
-    //
-    //            if ( store instanceof HostedRepository )
-    //            {
-    //                deploy = (HostedRepository) store;
-    //            }
-    //            else if ( store instanceof Group )
-    //            {
-    //                final Group group = (Group) store;
-    //                deploy = findDeployPoint( group );
-    //            }
-    //        }
-    //        catch ( final IndyDataException e )
-    //        {
-    //            logger.error( String.format( "Failed to retrieve deploy point for: %s. Reason: %s", key, e.getMessage() ),
-    //                          e );
-    //        }
-    //
-    //        if ( deploy == null )
-    //        {
-    //            return;
-    //        }
-    //
-    //        final ContentAdvisor advisor = StreamSupport.stream(
-    //                Spliterators.spliteratorUnknownSize( contentAdvisor.iterator(), Spliterator.ORDERED ), false )
-    //                                                    .filter( Objects::nonNull )
-    //                                                    .findFirst()
-    //                                                    .orElse( null );
-    //        final ContentQuality quality = advisor == null ? null : advisor.getContentQuality( path );
-    //        if ( quality == null )
-    //        {
-    //            return;
-    //        }
-    //
-    //        if ( ContentQuality.SNAPSHOT == quality && deploy.getSnapshotTimeoutSeconds() > 0 )
-    //        {
-    //            final int timeout = deploy.getSnapshotTimeoutSeconds();
-    //
-    //            //            //            logger.info( "[SNAPSHOT TIMEOUT SET] {}/{}; {}", deploy.getKey(), path, new Date( timeout ) );
-    //            //            cancel( new StoreKeyMatcher( key, CONTENT_JOB_TYPE ), path );
-    //
-    //            scheduleContentExpiration( key, path, timeout );
-    //        }
-    //    }
-    //
-    //    public void rescheduleDisableTimeout( final StoreKey key )
-    //            throws SchedulerException
-    //    {
-    //        if ( !isEnabled() )
-    //        {
-    //            return;
-    //        }
-    //
-    //        ArtifactStore store = null;
-    //        try
-    //        {
-    //            store = dataManager.getArtifactStore( key );
-    //        }
-    //        catch ( final IndyDataException e )
-    //        {
-    //            logger.error( String.format( "Failed to retrieve store for: %s. Reason: %s", key, e.getMessage() ), e );
-    //        }
-    //
-    //        if ( store == null )
-    //        {
-    //            return;
-    //        }
-    //
-    //        int timeout = store.getDisableTimeout();
-    //        if ( timeout == TIMEOUT_USE_DEFAULT )
-    //        {
-    //            // case TIMEOUT_USE_DEFAULT: will use default timeout configuration
-    //            timeout = config.getStoreDisableTimeoutSeconds();
-    //        }
-    //
-    //        if ( timeout > TIMEOUT_USE_DEFAULT && store.isDisabled() )
-    //        {
-    //            final StoreKey sk = store.getKey();
-    //            logger.debug( "Set/Reschedule disable timeout for store:{}", sk );
-    //            scheduleForStore( sk, DISABLE_TIMEOUT, sk.toString() + "#" + DISABLE_TIMEOUT, sk, timeout );
-    //        }
-    //    }
-    //
-    //    private HostedRepository findDeployPoint( final Group group )
-    //            throws IndyDataException
-    //    {
-    //        for ( final StoreKey key : group.getConstituents() )
-    //        {
-    //            if ( StoreType.hosted == key.getType() )
-    //            {
-    //                return (HostedRepository) dataManager.getArtifactStore( key );
-    //            }
-    //            else if ( StoreType.group == key.getType() )
-    //            {
-    //                final Group grp = (Group) dataManager.getArtifactStore( key );
-    //                final HostedRepository dp = findDeployPoint( grp );
-    //                if ( dp != null )
-    //                {
-    //                    return dp;
-    //                }
-    //            }
-    //        }
-    //
-    //        return null;
-    //    }
+        return new ExpirationSet( expirations );
+    }
 
-    //    @Deprecated
-    //    public void scheduleContentExpiration( final String key, final String path, final int timeoutSeconds )
-    //            throws SchedulerException
-    //    {
-    //        if ( !isEnabled() )
-    //        {
-    //            return;
-    //        }
-    //
-    //        logger.info( "Scheduling timeout for: {} in: {} in: {} seconds (at: {}).", path, key, timeoutSeconds,
-    //                     new Date( System.currentTimeMillis() + ( timeoutSeconds * 1000 ) ) );
-    //
-    //        schedule( key, JobType.CONTENT.getJobType(), path, new ContentExpiration( key, path ), timeoutSeconds );
-    //    }
+    @Deprecated
+    public Set<DtxSchedule> rescheduleAllBefore( final Collection<DtxSchedule> schedules, final long timeout )
+    {
 
+        if ( !isEnabled() )
+        {
+            return Collections.emptySet();
+        }
+
+        final Set<DtxSchedule> rescheduled = new HashSet<>();
+
+        final Date to = new Date( System.currentTimeMillis() + ( timeout * 1000 ) );
+        schedules.forEach( schedule -> {
+            final Date nextFire = getNextExpireTime( schedule );
+            if ( nextFire == null || !nextFire.after( to ) )
+            {
+                rescheduled.add( schedule );
+            }
+        } );
+
+        return rescheduled;
+    }
+    
 }

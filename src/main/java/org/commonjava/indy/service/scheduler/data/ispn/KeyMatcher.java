@@ -22,10 +22,10 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * A key matcher which is used to match the cache key with store key.
+ * A key matcher which is used to match the cache key with schedule key.
  *
  */
-public class StoreKeyMatcher
+public class KeyMatcher
         implements CacheKeyMatcher<ScheduleKey>
 {
 
@@ -33,10 +33,10 @@ public class StoreKeyMatcher
 
     private final String groupName;
 
-    public StoreKeyMatcher( final String storeKey, final String eventType )
+    public KeyMatcher( final String key, final String eventType )
     {
-        assert storeKey != null;
-        this.groupName = ScheduleManagerUtils.groupName( storeKey, eventType );
+        assert key != null;
+        this.groupName = ScheduleManagerUtils.groupName( key, eventType );
     }
 
     @Override

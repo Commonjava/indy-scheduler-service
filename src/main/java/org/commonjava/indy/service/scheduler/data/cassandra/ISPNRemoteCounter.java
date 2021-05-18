@@ -52,13 +52,7 @@ public class ISPNRemoteCounter
 
     private RemoteCacheManager remoteCacheManager;
 
-    //    private Map<String, BasicCacheHandle> caches = new ConcurrentHashMap<>(); // hold embedded and remote caches
-
-    private Map<String, StrongCounter> counters = new ConcurrentHashMap<>();
-
-    protected ISPNRemoteCounter()
-    {
-    }
+    private final Map<String, StrongCounter> counters = new ConcurrentHashMap<>();
 
     @PostConstruct
     public void start()
@@ -112,102 +106,5 @@ public class ISPNRemoteCounter
         } );
 
     }
-
-    //    public synchronized <K, V> BasicCacheHandle<K, V> getCache( String named )
-    //    {
-    //        BasicCacheHandle handle = caches.computeIfAbsent( named, ( k ) -> {
-    //            RemoteCache<K, V> cache;
-    //            try
-    //            {
-    //                // For infinispan 9.x, it needs to load the specific cache configuration to create it
-    //                // For infinispan 11.x, there is no need to load this configuration here, instead, declaring it
-    //                // in hotrod-client.properties and get the cache by remoteCacheManager.getCache( "cacheName" )
-    //                File confDir = ispnConfig.getInfinispanConfigDir();
-    //                File cacheConf = new File( confDir, "caches/cache-" + named + ".xml" );
-    //                if ( !cacheConf.exists() )
-    //                {
-    //                    logger.warn( "Invalid conf path, name: {}, path: {}", named, cacheConf );
-    //                    return null;
-    //                }
-    //                String confStr;
-    //                try (InputStream confStream = FileUtils.openInputStream( cacheConf ))
-    //                {
-    //                    confStr = interpolateStrFromStream( confStream, cacheConf.getPath() );
-    //                }
-    //                catch ( IOException e )
-    //                {
-    //                    throw new RuntimeException( "Cannot read cache configuration from file: " + cacheConf, e );
-    //                }
-    //                cache = remoteCacheManager.administration()
-    //                                          .getOrCreateCache( named, new XMLStringConfiguration( confStr ) );
-    //                if ( cache == null )
-    //                {
-    //                    logger.warn( "Can not get remote cache, name: {}", k );
-    //                    return null;
-    //                }
-    //            }
-    //            catch ( Exception e )
-    //            {
-    //                logger.warn( "Get remote cache failed", e );
-    //                return null;
-    //            }
-    //            logger.info( "Get remote cache, name: {}", k );
-    //            return new RemoteCacheHandle( k, cache, metricsManager, getCacheMetricPrefix( k ) );
-    //        } );
-    //
-    //        return handle;
-    //    }
-
-    //    public synchronized <K> void registerProtoSchema( Class<K> kClass, String packageName, String fileName )
-    //    {
-    //        SerializationContext ctx = MarshallerUtil.getSerializationContext( remoteCacheManager );
-    //        // Use ProtoSchemaBuilder to define a Protobuf schema on the client
-    //        ProtoSchemaBuilder protoSchemaBuilder = new ProtoSchemaBuilder();
-    //        String protoFile;
-    //        try
-    //        {
-    //            protoFile =
-    //                    protoSchemaBuilder.fileName( fileName ).addClass( kClass ).packageName( packageName ).build( ctx );
-    //        }
-    //        catch ( IOException e )
-    //        {
-    //            throw new RuntimeException( " Register proto schema error, schema: " + fileName, e );
-    //        }
-    //
-    //        // Retrieve metadata cache and register the new schema on the infinispan server too
-    //        RemoteCache<String, String> metadataCache = remoteCacheManager.getCache( PROTOBUF_METADATA_CACHE_NAME );
-    //
-    //        metadataCache.put( fileName, protoFile );
-    //    }
-    //
-    //    public synchronized void registerProtoAndMarshallers( String protofile, List<BaseMarshaller> marshallers )
-    //    {
-    //        SerializationContext ctx = MarshallerUtil.getSerializationContext( remoteCacheManager );
-    //        try
-    //        {
-    //            ctx.registerProtoFiles( FileDescriptorSource.fromResources( protofile ) );
-    //        }
-    //        catch ( IOException e )
-    //        {
-    //            throw new RuntimeException( "Register proto files error, protofile: " + protofile, e );
-    //        }
-    //
-    //        for ( BaseMarshaller marshaller : marshallers )
-    //        {
-    //            try
-    //            {
-    //                ctx.registerMarshaller( marshaller );
-    //            }
-    //            catch ( Exception e )
-    //            {
-    //                throw new RuntimeException( "Register the marshallers error.", e );
-    //            }
-    //        }
-    //
-    //        // Retrieve metadata cache and register the new schema on the infinispan server too
-    //        RemoteCache<String, String> metadataCache = remoteCacheManager.getCache( PROTOBUF_METADATA_CACHE_NAME );
-    //
-    //        metadataCache.put( protofile, ResourceUtils.getResourceAsString( getClass(), "/" + protofile ) );
-    //    }
 
 }

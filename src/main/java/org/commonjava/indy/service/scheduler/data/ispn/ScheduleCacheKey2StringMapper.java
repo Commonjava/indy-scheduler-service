@@ -32,11 +32,11 @@ public class ScheduleCacheKey2StringMapper
     {
         final String[] parts = stringKey.split( FIELD_SPLITTER );
 
-        final String storeKey = parts[0];
+        final String key = parts[0];
         final String type = parts[1];
         final String name = parts[2];
 
-        return new ScheduleKey( storeKey, type, name );
+        return new ScheduleKey( key, type, name );
     }
 
     @Override

@@ -24,57 +24,57 @@ import java.util.Spliterator;
 import java.util.function.Consumer;
 
 public class ExpirationSet
-	implements Iterable<Expiration>
+        implements Iterable<Expiration>
 {
-	private Set<Expiration> items;
+    private Set<Expiration> items;
 
-	public ExpirationSet()
-	{
-		items = new HashSet<>();
-	}
+    public ExpirationSet()
+    {
+        items = new HashSet<>();
+    }
 
-	public ExpirationSet( Expiration... items )
-	{
-		this.items = new HashSet<>(Arrays.asList(items ) );
-	}
+    public ExpirationSet( Expiration... items )
+    {
+        this.items = new HashSet<>( Arrays.asList( items ) );
+    }
 
-	public ExpirationSet( Set<Expiration> items )
-	{
-		this.items = items;
-	}
+    public ExpirationSet( Set<Expiration> items )
+    {
+        this.items = items;
+    }
 
-	public Set<Expiration> getItems()
-	{
-		return items;
-	}
+    public Set<Expiration> getItems()
+    {
+        return items;
+    }
 
-	public void setItems( Set<Expiration> items )
-	{
-		this.items = items;
-	}
+    public void setItems( Set<Expiration> items )
+    {
+        this.items = items;
+    }
 
-	@Override
-	public Iterator<Expiration> iterator()
-	{
-		return items == null ? Collections.emptyIterator() : items.iterator();
-	}
+    @Override
+    public Iterator<Expiration> iterator()
+    {
+        return items == null ? Collections.emptyIterator() : items.iterator();
+    }
 
-	@Override
-	public void forEach( Consumer<? super Expiration> action )
-	{
-		if ( items != null )
-		{
-			for ( Expiration exp : items )
-			{
-				action.accept( exp );
-			}
-		}
-	}
+    @Override
+    public void forEach( Consumer<? super Expiration> action )
+    {
+        if ( items != null )
+        {
+            for ( Expiration exp : items )
+            {
+                action.accept( exp );
+            }
+        }
+    }
 
-	@Override
-	public Spliterator<Expiration> spliterator()
-	{
-		return items == null ? Collections.<Expiration>emptySet().spliterator() : items.spliterator();
-	}
+    @Override
+    public Spliterator<Expiration> spliterator()
+    {
+        return items == null ? Collections.<Expiration>emptySet().spliterator() : items.spliterator();
+    }
 }
 
