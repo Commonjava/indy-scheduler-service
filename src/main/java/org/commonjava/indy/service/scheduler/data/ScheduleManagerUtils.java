@@ -7,9 +7,9 @@ import org.slf4j.LoggerFactory;
 public class ScheduleManagerUtils
 {
 
-    public static String groupName( final String storeKey, final String jobType )
+    public static String groupName( final String key, final String jobType )
     {
-        return storeKey + groupNameSuffix( jobType );
+        return key + groupNameSuffix( jobType );
     }
 
     public static String groupNameSuffix( final String jobType )
@@ -17,16 +17,17 @@ public class ScheduleManagerUtils
         return "#" + jobType;
     }
 
-    public static String storeKeyFrom( final String group )
+    @Deprecated
+    public static String keyFrom( final String group )
     {
         final String[] parts = group.split( "#" );
         if ( parts.length > 1 )
         {
             final Logger logger = LoggerFactory.getLogger( ISPNScheduleManager.class );
-            String storeKey = null;
+            String key = null;
             try
             {
-                storeKey = parts[0];
+                key = parts[0];
             }
             catch ( IllegalArgumentException e )
             {
@@ -34,16 +35,16 @@ public class ScheduleManagerUtils
             }
 
             //TODO this part of code may be obsolete, will need further check then remove
-            if ( storeKey == null )
+            if ( key == null )
             {
                 logger.info( "Not a store key for string: {}, will parse as store type", parts[0] );
                 final String type = parts[0];
                 if ( type != null )
                 {
-                    storeKey = String.format( "%s:%s:%s", "maven", type, parts[1] );
+                    key = String.format( "%s:%s:%s", "maven", type, parts[1] );
                 }
             }
-            return storeKey;
+            return key;
         }
 
         return null;

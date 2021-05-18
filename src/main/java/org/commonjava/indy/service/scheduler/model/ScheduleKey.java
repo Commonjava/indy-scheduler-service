@@ -44,9 +44,9 @@ public class ScheduleKey
     {
     }
 
-    public ScheduleKey( final String storeKey, final String type, final String name )
+    public ScheduleKey( final String key, final String type, final String name )
     {
-        this.key = storeKey;
+        this.key = key;
         this.type = type;
         this.name = name;
         this.groupName = ScheduleManagerUtils.groupName( this.key, this.type );
