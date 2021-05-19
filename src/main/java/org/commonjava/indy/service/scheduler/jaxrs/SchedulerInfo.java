@@ -15,12 +15,21 @@
  */
 package org.commonjava.indy.service.scheduler.jaxrs;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.commonjava.indy.service.scheduler.data.ScheduleManager;
+import org.commonjava.indy.service.scheduler.exception.SchedulerException;
+import org.commonjava.indy.service.scheduler.model.ScheduleKey;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
+import java.util.Optional;
 
 public class SchedulerInfo
 {
+    private final Logger logger = LoggerFactory.getLogger( this.getClass() );
+
     @JsonProperty( "key" )
     private String key;
 
@@ -36,14 +45,66 @@ public class SchedulerInfo
     @JsonProperty( "timeout_seconds" )
     private int timeoutSeconds;
 
+    @JsonIgnore
+    private transient ScheduleManager scheduleManager;
+
+    @JsonIgnore
+    private transient ScheduleKey scheduleKey;
+
+    public SchedulerInfo buildKey()
+    {
+        this.scheduleKey = new ScheduleKey( this.getKey(), this.getJobType(), this.jobName );
+        return this;
+    }
+
+    public SchedulerInfo setScheduleManager( final ScheduleManager scheduleManager )
+    {
+        assert scheduleManager != null;
+        this.scheduleManager = scheduleManager;
+        return this;
+    }
+
+    public SchedulerInfo createScheduler()
+            throws SchedulerException
+    {
+        if ( scheduleManager == null )
+        {
+            throw new SchedulerException( "Cannot create scheduler for {}: There is no scheduler manager bounded!" );
+        }
+        try
+        {
+            scheduleManager.schedule( this.getKey(), this.getJobType(), this.getJobName(), this.getPayload(),
+                                      this.getTimeoutSeconds() );
+        }
+        catch ( SchedulerException e )
+        {
+            logger.error( "Some errors happened during scheduling: {}", e.getMessage(), e );
+            throw e;
+        }
+        return this;
+    }
+
+    public Optional<SchedulerInfo> cancelScheduler()
+            throws SchedulerException
+    {
+        if ( scheduleManager == null )
+        {
+            throw new SchedulerException( "Cannot create scheduler for {}: There is no scheduler manager bounded!" );
+        }
+        Optional<ScheduleKey> scheduleKey =
+                scheduleManager.cancel( this.getKey(), this.getJobType(), this.getJobName() );
+        return scheduleKey.isEmpty() ? Optional.empty() : Optional.of( this );
+    }
+
     public String getKey()
     {
         return key;
     }
 
-    public void setKey( String key )
+    public SchedulerInfo setKey( String key )
     {
         this.key = key;
+        return this;
     }
 
     public String getJobType()
@@ -51,9 +112,10 @@ public class SchedulerInfo
         return jobType;
     }
 
-    public void setJobType( String jobType )
+    public SchedulerInfo setJobType( String jobType )
     {
         this.jobType = jobType;
+        return this;
     }
 
     public String getJobName()
@@ -61,9 +123,10 @@ public class SchedulerInfo
         return jobName;
     }
 
-    public void setJobName( String jobName )
+    public SchedulerInfo setJobName( String jobName )
     {
         this.jobName = jobName;
+        return this;
     }
 
     public Map<String, Object> getPayload()
@@ -71,9 +134,10 @@ public class SchedulerInfo
         return payload;
     }
 
-    public void setPayload( Map<String, Object> payload )
+    public SchedulerInfo setPayload( Map<String, Object> payload )
     {
         this.payload = payload;
+        return this;
     }
 
     public int getTimeoutSeconds()
@@ -81,8 +145,10 @@ public class SchedulerInfo
         return timeoutSeconds;
     }
 
-    public void setTimeoutSeconds( int timeoutSeconds )
+    public SchedulerInfo setTimeoutSeconds( int timeoutSeconds )
     {
         this.timeoutSeconds = timeoutSeconds;
+        return this;
     }
+
 }

@@ -18,7 +18,6 @@ package org.commonjava.indy.service.scheduler.controller;
 import org.commonjava.indy.service.scheduler.data.ScheduleManager;
 import org.commonjava.indy.service.scheduler.exception.SchedulerException;
 import org.commonjava.indy.service.scheduler.jaxrs.SchedulerInfo;
-import org.commonjava.indy.service.scheduler.model.ScheduleKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,24 +42,25 @@ public class SchedulerController
         this.scheduleManager = scheduleManager;
     }
 
+    public Optional<SchedulerInfo> get( final String key, final String jobType, final String jobName )
+    {
+        return scheduleManager.get( key, jobType, jobName );
+    }
+
     public void schedule( final SchedulerInfo scheduleInfo )
             throws SchedulerException
     {
-        try
-        {
-            scheduleManager.schedule( scheduleInfo.getKey(), scheduleInfo.getJobType(), scheduleInfo.getJobName(),
-                                      scheduleInfo.getPayload(), scheduleInfo.getTimeoutSeconds() );
-        }
-        catch ( SchedulerException e )
-        {
-            logger.error( "Some errors happened during scheduling: {}", e.getMessage(), e );
-            throw e;
-        }
+        scheduleInfo.setScheduleManager( scheduleManager ).createScheduler();
     }
 
-    public Optional<ScheduleKey> cancel( final ScheduleKey key )
+    public Optional<SchedulerInfo> cancel( final String key, final String jobType, final String jobName )
+            throws SchedulerException
     {
-        return scheduleManager.cancel( key.getKey(), key.getType(), key.getName() );
+        return new SchedulerInfo().setKey( key )
+                                  .setJobType( jobType )
+                                  .setJobName( jobName )
+                                  .setScheduleManager( scheduleManager )
+                                  .cancelScheduler();
     }
 
 }

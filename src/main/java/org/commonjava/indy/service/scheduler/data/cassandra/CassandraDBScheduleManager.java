@@ -21,8 +21,8 @@ import io.quarkus.runtime.Startup;
 import org.commonjava.indy.service.scheduler.config.CassandraConfiguration;
 import org.commonjava.indy.service.scheduler.data.ClusterScheduleManager;
 import org.commonjava.indy.service.scheduler.data.ScheduleManager;
-import org.commonjava.indy.service.scheduler.data.ScheduleManagerUtils;
 import org.commonjava.indy.service.scheduler.exception.SchedulerException;
+import org.commonjava.indy.service.scheduler.jaxrs.SchedulerInfo;
 import org.commonjava.indy.service.scheduler.model.Expiration;
 import org.commonjava.indy.service.scheduler.model.ExpirationSet;
 import org.commonjava.indy.service.scheduler.model.ScheduleKey;
@@ -42,6 +42,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+
+import static org.commonjava.indy.service.scheduler.data.ScheduleManagerUtils.groupName;
 
 /**
  * A CassandraDBScheduleManager is used to do the schedule time out jobs to do some time-related jobs, like
@@ -69,10 +71,6 @@ public class CassandraDBScheduleManager
     @Inject
     ScheduleDB scheduleDB;
 
-    //    @Inject
-    //    @Any
-    //    Instance<ContentAdvisor> contentAdvisor;
-
     @Override
     public void schedule( final String key, final String jobType, final String jobName,
                           final Map<String, Object> payload, final int startSeconds )
@@ -95,6 +93,37 @@ public class CassandraDBScheduleManager
 
         scheduleDB.createSchedule( key, jobType, jobName, payloadStr, (long) startSeconds );
         logger.debug( "Scheduled for the key {} with timeout: {} seconds", key, startSeconds );
+    }
+
+    @Override
+    public Optional<SchedulerInfo> get( final String key, final String jobType, final String jobName )
+    {
+        if ( !isEnabled() )
+        {
+            return Optional.empty();
+        }
+        final DtxSchedule schedule = scheduleDB.querySchedule( key, jobName );
+        if ( schedule == null )
+        {
+            return Optional.empty();
+        }
+        Map<String, Object> payload;
+
+        try
+        {
+            payload = objectMapper.readValue( schedule.getPayload(), Map.class );
+        }
+        catch ( final JsonProcessingException e )
+        {
+            logger.error( "Can not get payload due to serializaion problem. The original payload string is {}",
+                          schedule.getPayload() );
+            return Optional.empty();
+        }
+        return Optional.of( new SchedulerInfo().setKey( key )
+                                               .setJobType( jobType )
+                                               .setJobName( jobName )
+                                               .setPayload( payload )
+                                               .setTimeoutSeconds( schedule.getLifespan().intValue() ) );
     }
 
     @Override
@@ -152,7 +181,7 @@ public class CassandraDBScheduleManager
 
     private Expiration toExpiration( final DtxSchedule dtxSchedule )
     {
-        return new Expiration( ScheduleManagerUtils.groupName( dtxSchedule.getStoreKey(), dtxSchedule.getJobType() ),
+        return new Expiration( groupName( dtxSchedule.getStoreKey(), dtxSchedule.getJobType() ),
                                dtxSchedule.getJobName(), getNextExpireTime( dtxSchedule ) );
     }
 
@@ -239,5 +268,5 @@ public class CassandraDBScheduleManager
 
         return rescheduled;
     }
-    
+
 }

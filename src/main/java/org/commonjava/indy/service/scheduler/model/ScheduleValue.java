@@ -31,6 +31,8 @@ public class ScheduleValue
 //    @FullTextField
     private Map<String, Object> dataPayload;
 
+    private int timeoutSeconds;
+
     public ScheduleValue()
     {
     }
@@ -59,6 +61,16 @@ public class ScheduleValue
     public void setDataPayload( Map<String, Object> dataPayload )
     {
         this.dataPayload = dataPayload;
+    }
+
+    public int getTimeoutSeconds()
+    {
+        return timeoutSeconds;
+    }
+
+    public void setTimeoutSeconds( int timeoutSeconds )
+    {
+        this.timeoutSeconds = timeoutSeconds;
     }
 
     @Override
