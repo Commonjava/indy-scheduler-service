@@ -20,7 +20,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.smallrye.mutiny.Uni;
 import org.commonjava.indy.service.scheduler.controller.SchedulerController;
 import org.commonjava.indy.service.scheduler.exception.SchedulerException;
-import org.commonjava.indy.service.scheduler.model.ScheduleKey;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
@@ -50,8 +49,29 @@ public class SchedulerResource
 
     @GET
     @Produces( APPLICATION_JSON )
-    public Uni<Response> get( final @Context SecurityContext securityContext )
+    public Uni<Response> get( @QueryParam( "key" ) final String key, @QueryParam( "job_type" ) final String jobType,
+                              @QueryParam( "job_name" ) final String jobName,
+                              final @Context SecurityContext securityContext )
     {
+        Optional<SchedulerInfo> info = controller.get( key, jobType, jobName );
+        Response response;
+        if ( info.isEmpty() )
+        {
+            response = Response.status( NOT_FOUND ).build();
+        }
+        else
+        {
+            response = Response.ok( info ).build();
+        }
+        return Uni.createFrom().item( response );
+    }
+
+    @GET
+    @Path( "/all" )
+    @Produces( APPLICATION_JSON )
+    public Uni<Response> getAll( final @Context SecurityContext securityContext )
+    {
+        //TODO: Not implement yet!
         return Uni.createFrom().item( Response.status( Response.Status.METHOD_NOT_ALLOWED ).build() );
     }
 
@@ -96,16 +116,25 @@ public class SchedulerResource
                                  final @Context SecurityContext securityContext )
     {
         Response response;
-        final ScheduleKey scheduleKey = new ScheduleKey( key, jobType, jobName );
-        Optional<ScheduleKey> scheduledKey = controller.cancel( scheduleKey );
-        if ( scheduledKey.isPresent() )
+        try
         {
-            response = Response.noContent().build();
+            if ( controller.cancel( key, jobType, jobName ).isPresent() )
+            {
+                response = Response.noContent().build();
+            }
+            else
+            {
+                response = Response.status( NOT_FOUND ).build();
+            }
         }
-        else
+        catch ( SchedulerException e )
         {
-            response = Response.status( NOT_FOUND ).build();
+            response = Response.status( INTERNAL_SERVER_ERROR )
+                               .entity( new ErrorResponseInfo( String.valueOf( INTERNAL_SERVER_ERROR.getStatusCode() ),
+                                                               e.getMessage() ) )
+                               .build();
         }
+
         return Uni.createFrom().item( response );
     }
 

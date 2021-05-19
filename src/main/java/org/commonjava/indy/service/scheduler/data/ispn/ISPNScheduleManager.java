@@ -24,6 +24,7 @@ import org.commonjava.indy.service.scheduler.data.ispn.local.CacheHandle;
 import org.commonjava.indy.service.scheduler.event.ScheduleTriggerEvent;
 import org.commonjava.indy.service.scheduler.event.kafka.KafkaEventUtils;
 import org.commonjava.indy.service.scheduler.exception.SchedulerException;
+import org.commonjava.indy.service.scheduler.jaxrs.SchedulerInfo;
 import org.commonjava.indy.service.scheduler.model.Expiration;
 import org.commonjava.indy.service.scheduler.model.ExpirationSet;
 import org.commonjava.indy.service.scheduler.model.ScheduleKey;
@@ -141,6 +142,29 @@ public class ISPNScheduleManager
     }
 
     @Override
+    public Optional<SchedulerInfo> get( final String key, final String jobType, final String jobName )
+    {
+        ScheduleValue v = scheduleCache.get( new ScheduleKey( key, jobType, jobName ) );
+        if ( v == null )
+        {
+            return Optional.empty();
+        }
+        Map<String, Object> payload;
+        try
+        {
+            final String payloadStr = (String) v.getDataPayload().get( PAYLOAD );
+            payload = objectMapper.readValue( payloadStr, Map.class );
+        }
+        catch ( JsonProcessingException | ClassCastException e )
+        {
+            throw new RuntimeException(
+                    String.format( "Cannot get payload for scheduler info. Key: %s, JobName: %s", key, jobName ), e );
+        }
+        return Optional.of(
+                new SchedulerInfo().setKey( key ).setJobType( jobType ).setJobName( jobName ).setPayload( payload ) );
+    }
+
+    @Override
     public void schedule( final String key, final String jobType, final String jobName,
                           final Map<String, Object> payload, final int timeoutInSecs )
             throws SchedulerException
@@ -166,8 +190,9 @@ public class ISPNScheduleManager
 
         final ScheduleKey cacheKey = new ScheduleKey( key, jobType, jobName );
 
-        scheduleCache.execute( cache -> cache.put( cacheKey, new ScheduleValue( cacheKey, dataMap ), timeoutInSecs,
-                                                   TimeUnit.SECONDS ) );
+        final ScheduleValue val = new ScheduleValue( cacheKey, dataMap );
+        val.setTimeoutSeconds( timeoutInSecs );
+        scheduleCache.execute( cache -> cache.put( cacheKey, val, timeoutInSecs, TimeUnit.SECONDS ) );
         logger.debug( "Scheduled for the key {} with timeout: {} seconds", cacheKey, timeoutInSecs );
     }
 
@@ -179,7 +204,7 @@ public class ISPNScheduleManager
             logger.debug( "Scheduler disabled." );
             return empty();
         }
-        ScheduleKey scheduleKey = new ScheduleKey( key, jobType, jobName );
+        final ScheduleKey scheduleKey = new ScheduleKey( key, jobType, jobName );
         return removeCache( scheduleKey ) == null ? empty() : of( scheduleKey );
     }
 
@@ -293,7 +318,6 @@ public class ISPNScheduleManager
 
         return null;
     }
-
 
     private ScheduleValue removeCache( final ScheduleKey cacheKey )
     {
