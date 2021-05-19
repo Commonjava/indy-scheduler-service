@@ -20,6 +20,7 @@ import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import org.commonjava.indy.service.scheduler.ftests.profile.ISPNFunctionProfile;
 import org.commonjava.indy.service.scheduler.jaxrs.SchedulerInfo;
+import org.commonjava.indy.service.scheduler.matchers.SchedulerInfoMatcher;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
@@ -29,7 +30,6 @@ import static io.restassured.RestAssured.given;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.Response.Status.CREATED;
 import static javax.ws.rs.core.Response.Status.NOT_FOUND;
-import static javax.ws.rs.core.Response.Status.NO_CONTENT;
 import static javax.ws.rs.core.Response.Status.OK;
 import static org.commonjava.indy.service.scheduler.testutil.TestUtil.prepareCustomizedMapper;
 
@@ -72,6 +72,7 @@ public class ScheduleRetrieveTest
                .queryParam( "job_name", name )
                .get( API_BASE )
                .then()
-               .statusCode( OK.getStatusCode() );
+               .statusCode( OK.getStatusCode() )
+               .body( new SchedulerInfoMatcher( mapper, info ) );
     }
 }

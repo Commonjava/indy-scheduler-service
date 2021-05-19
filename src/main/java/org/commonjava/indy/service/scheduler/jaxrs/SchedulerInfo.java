@@ -24,6 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 public class SchedulerInfo
@@ -149,6 +150,32 @@ public class SchedulerInfo
     {
         this.timeoutSeconds = timeoutSeconds;
         return this;
+    }
+
+    @Override
+    public boolean equals( Object other )
+    {
+        if ( !( other instanceof SchedulerInfo ) )
+        {
+            return false;
+        }
+
+        // Ignores timeout and payload check in equals
+        final SchedulerInfo that = (SchedulerInfo) other;
+        return Objects.equals( this.key, that.key ) && Objects.equals( this.jobType, that.jobType ) && Objects.equals(
+                this.jobName, that.jobName );
+    }
+
+    @Override
+    public int hashCode()
+    {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + ( ( key == null ) ? 0 : key.hashCode() );
+        result = prime * result + ( ( jobType == null ) ? 0 : jobType.hashCode() );
+        result = prime * result + ( ( jobName == null ) ? 0 : jobName.hashCode() );
+        // Ignores timeout and payload hashcode
+        return result;
     }
 
 }

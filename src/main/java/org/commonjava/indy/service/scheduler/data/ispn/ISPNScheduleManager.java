@@ -149,10 +149,19 @@ public class ISPNScheduleManager
         {
             return Optional.empty();
         }
-        return Optional.of( new SchedulerInfo().setKey( key )
-                                               .setJobType( jobType )
-                                               .setJobName( jobName )
-                                               .setPayload( v.getDataPayload() ) );
+        Map<String, Object> payload;
+        try
+        {
+            final String payloadStr = (String) v.getDataPayload().get( PAYLOAD );
+            payload = objectMapper.readValue( payloadStr, Map.class );
+        }
+        catch ( JsonProcessingException | ClassCastException e )
+        {
+            throw new RuntimeException(
+                    String.format( "Cannot get payload for scheduler info. Key: %s, JobName: %s", key, jobName ), e );
+        }
+        return Optional.of(
+                new SchedulerInfo().setKey( key ).setJobType( jobType ).setJobName( jobName ).setPayload( payload ) );
     }
 
     @Override
