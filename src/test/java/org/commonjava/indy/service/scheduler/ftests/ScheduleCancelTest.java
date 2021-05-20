@@ -44,12 +44,12 @@ public class ScheduleCancelTest
             throws Exception
     {
         final String name = newName();
-        final SchedulerInfo info = new SchedulerInfo();
-        info.setKey( "testKey" );
-        info.setJobType( "testType" );
-        info.setJobName( name );
-        info.setPayload( Collections.singletonMap( "payload1", "payloadVal1" ) );
-        info.setTimeoutSeconds( 30 );
+        final SchedulerInfo info = new SchedulerInfo().setKey( "testKey" )
+                                                      .setJobType( "testType" )
+                                                      .setJobName( name )
+                                                      .setPayload(
+                                                              Collections.singletonMap( "payload1", "payloadVal1" ) )
+                                                      .setTimeoutSeconds( 30 );
         final String json = mapper.writeValueAsString( info );
         //First to create the expiration content
         given().body( json )

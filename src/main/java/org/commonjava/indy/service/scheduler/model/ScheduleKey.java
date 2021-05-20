@@ -28,16 +28,16 @@ import java.util.Objects;
 public class ScheduleKey
         implements Externalizable, Serializable
 {
-//    @GenericField
+    //    @GenericField
     private String key;
 
-//    @GenericField
+    //    @GenericField
     private String type;
 
-//    @GenericField
+    //    @GenericField
     private String name;
 
-//    @GenericField
+    //    @GenericField
     private String groupName;
 
     public ScheduleKey()
@@ -72,12 +72,6 @@ public class ScheduleKey
         return groupName;
     }
 
-    public static ScheduleKey fromGroupWithName( final String group, final String name )
-    {
-        final String[] splits = group.split( "#" );
-        return new ScheduleKey( splits[0], splits[1], name );
-    }
-
     @Override
     public boolean equals( Object obj )
     {
@@ -87,8 +81,8 @@ public class ScheduleKey
         }
 
         final ScheduleKey that = (ScheduleKey) obj;
-        return Objects.equals( this.key, that.key ) && Objects.equals( this.type, that.type )
-                && Objects.equals( this.name, that.name );
+        return Objects.equals( this.key, that.key ) && Objects.equals( this.type, that.type ) && Objects.equals(
+                this.name, that.name );
     }
 
     @Override
@@ -104,17 +98,12 @@ public class ScheduleKey
 
     public String toStringKey()
     {
-        return ( key != null ? key.toString() : "" ) + "#" + type + "#" + name;
+        return ( key != null ? key : "" ) + "#" + type + "#" + name;
     }
 
     public String toString()
     {
         return toStringKey();
-    }
-
-    public boolean exists()
-    {
-        return this.key != null && this.type != null;
     }
 
     @Override

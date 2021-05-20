@@ -43,12 +43,12 @@ public class ScheduleCreateTest
             throws Exception
     {
         final String name = newName();
-        final SchedulerInfo info = new SchedulerInfo();
-        info.setKey( "testKey" );
-        info.setJobType( "testType" );
-        info.setJobName( name );
-        info.setPayload( Collections.singletonMap( "payload1", "payloadVal1" ) );
-        info.setTimeoutSeconds( 30 );
+        final SchedulerInfo info = new SchedulerInfo().setKey( "testKey" )
+                                                      .setJobType( "testType" )
+                                                      .setJobName( name )
+                                                      .setPayload(
+                                                              Collections.singletonMap( "payload1", "payloadVal1" ) )
+                                                      .setTimeoutSeconds( 2 );
         final String json = mapper.writeValueAsString( info );
         given().body( json )
                .contentType( APPLICATION_JSON )

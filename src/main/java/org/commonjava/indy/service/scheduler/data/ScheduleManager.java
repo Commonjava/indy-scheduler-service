@@ -11,7 +11,9 @@ import java.util.Optional;
 
 public interface ScheduleManager
 {
-    Optional<SchedulerInfo> get(final String key, final String jobType, final String jobName);
+    String CONTENT_JOB_TYPE = "CONTENT";
+
+    Optional<SchedulerInfo> get( final String key, final String jobName, final String jobType );
 
     void schedule( final String key, final String jobType, final String jobName, final Map<String, Object> payload,
                    final int startSeconds )
