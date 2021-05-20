@@ -81,11 +81,11 @@ public class CassandraConfiguration
     Optional<String> scheduleKeyspace;
 
     @Inject
-    @ConfigProperty( name = "cassandra.partition.range", defaultValue = "1L" )
+    @ConfigProperty( name = "cassandra.partition.range", defaultValue = "1" )
     long partitionKeyRange;
 
     @Inject
-    @ConfigProperty( name = "cassandra.rate.period", defaultValue = "60L" )
+    @ConfigProperty( name = "cassandra.rate.period", defaultValue = "60" )
     long scheduleRatePeriod;
 
     @Inject
