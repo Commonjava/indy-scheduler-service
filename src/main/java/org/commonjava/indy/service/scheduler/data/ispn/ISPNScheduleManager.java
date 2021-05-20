@@ -81,15 +81,13 @@ public class ISPNScheduleManager
 {
     private final Logger logger = LoggerFactory.getLogger( getClass() );
 
-    public static final String PAYLOAD = "payload";
+    private static final String JOB_TYPE = "JOB_TYPE";
 
-    public static final String ANY = "__ANY__";
+    private static final String PAYLOAD = "payload";
 
-    public static final String CONTENT_JOB_TYPE = "CONTENT";
+    private static final String ANY = "__ANY__";
 
-    public static final String JOB_TYPE = "JOB_TYPE";
-
-    public static final String SCHEDULE_TIME = "SCHEDULE_TIME";
+    private static final String SCHEDULE_TIME = "SCHEDULE_TIME";
 
     @Inject
     ObjectMapper objectMapper;
@@ -142,7 +140,7 @@ public class ISPNScheduleManager
     }
 
     @Override
-    public Optional<SchedulerInfo> get( final String key, final String jobType, final String jobName )
+    public Optional<SchedulerInfo> get( final String key, final String jobName, final String jobType )
     {
         ScheduleValue v = scheduleCache.get( new ScheduleKey( key, jobType, jobName ) );
         if ( v == null )
@@ -160,8 +158,10 @@ public class ISPNScheduleManager
             throw new RuntimeException(
                     String.format( "Cannot get payload for scheduler info. Key: %s, JobName: %s", key, jobName ), e );
         }
-        return Optional.of(
-                new SchedulerInfo().setKey( key ).setJobType( jobType ).setJobName( jobName ).setPayload( payload ) );
+        return Optional.of( new SchedulerInfo().setKey( key )
+                                               .setJobType( jobType )
+                                               .setJobName( jobName )
+                                               .setPayload( payload ) );
     }
 
     @Override

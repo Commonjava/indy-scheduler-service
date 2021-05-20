@@ -49,11 +49,11 @@ public class SchedulerResource
 
     @GET
     @Produces( APPLICATION_JSON )
-    public Uni<Response> get( @QueryParam( "key" ) final String key, @QueryParam( "job_type" ) final String jobType,
-                              @QueryParam( "job_name" ) final String jobName,
+    public Uni<Response> get( @QueryParam( "key" ) final String key, @QueryParam( "job_name" ) final String jobName,
+                              @QueryParam( "job_type" ) final String jobType,
                               final @Context SecurityContext securityContext )
     {
-        Optional<SchedulerInfo> info = controller.get( key, jobType, jobName );
+        Optional<SchedulerInfo> info = controller.get( key, jobName, jobType );
         Response response;
         if ( info.isEmpty() )
         {
@@ -111,14 +111,14 @@ public class SchedulerResource
 
     @DELETE
     @Produces( APPLICATION_JSON )
-    public Uni<Response> cancel( @QueryParam( "key" ) final String key, @QueryParam( "job_type" ) final String jobType,
-                                 @QueryParam( "job_name" ) final String jobName,
+    public Uni<Response> cancel( @QueryParam( "key" ) final String key, @QueryParam( "job_name" ) final String jobName,
+                                 @QueryParam( "job_type" ) final String jobType,
                                  final @Context SecurityContext securityContext )
     {
         Response response;
         try
         {
-            if ( controller.cancel( key, jobType, jobName ).isPresent() )
+            if ( controller.cancel( key, jobName, jobType ).isPresent() )
             {
                 response = Response.noContent().build();
             }

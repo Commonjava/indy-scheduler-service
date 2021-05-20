@@ -25,6 +25,9 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import java.util.Optional;
 
+import static org.apache.commons.lang3.StringUtils.isBlank;
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
+
 @ApplicationScoped
 public class SchedulerController
 {
@@ -42,9 +45,10 @@ public class SchedulerController
         this.scheduleManager = scheduleManager;
     }
 
-    public Optional<SchedulerInfo> get( final String key, final String jobType, final String jobName )
+    public Optional<SchedulerInfo> get( final String key, final String jobName, final String jobType )
     {
-        return scheduleManager.get( key, jobType, jobName );
+        final String type = getJobType( jobType );
+        return scheduleManager.get( key, jobName, type );
     }
 
     public void schedule( final SchedulerInfo scheduleInfo )
@@ -53,14 +57,22 @@ public class SchedulerController
         scheduleInfo.setScheduleManager( scheduleManager ).createScheduler();
     }
 
-    public Optional<SchedulerInfo> cancel( final String key, final String jobType, final String jobName )
+    public Optional<SchedulerInfo> cancel( final String key, final String jobName, final String jobType )
             throws SchedulerException
     {
+        assert isNotBlank( key );
+        assert isNotBlank( jobName );
+        final String type = getJobType( jobType );
         return new SchedulerInfo().setKey( key )
-                                  .setJobType( jobType )
                                   .setJobName( jobName )
+                                  .setJobType( type )
                                   .setScheduleManager( scheduleManager )
                                   .cancelScheduler();
+    }
+
+    private String getJobType( final String nullableType )
+    {
+        return isBlank( nullableType ) ? ScheduleManager.CONTENT_JOB_TYPE : nullableType;
     }
 
 }

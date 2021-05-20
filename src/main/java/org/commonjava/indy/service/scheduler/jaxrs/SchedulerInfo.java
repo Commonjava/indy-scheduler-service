@@ -27,6 +27,9 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import static org.apache.commons.lang3.StringUtils.isBlank;
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
+
 public class SchedulerInfo
 {
     private final Logger logger = LoggerFactory.getLogger( this.getClass() );
@@ -68,6 +71,12 @@ public class SchedulerInfo
     public SchedulerInfo createScheduler()
             throws SchedulerException
     {
+        assert isNotBlank( jobName );
+        assert isNotBlank( key );
+        if ( isBlank( jobType ) )
+        {
+            setJobType( ScheduleManager.CONTENT_JOB_TYPE );
+        }
         if ( scheduleManager == null )
         {
             throw new SchedulerException( "Cannot create scheduler for {}: There is no scheduler manager bounded!" );

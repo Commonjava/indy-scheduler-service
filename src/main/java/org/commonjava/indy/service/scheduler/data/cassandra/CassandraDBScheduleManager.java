@@ -96,7 +96,7 @@ public class CassandraDBScheduleManager
     }
 
     @Override
-    public Optional<SchedulerInfo> get( final String key, final String jobType, final String jobName )
+    public Optional<SchedulerInfo> get( final String key, final String jobName, final String jobType )
     {
         if ( !isEnabled() )
         {
@@ -120,8 +120,8 @@ public class CassandraDBScheduleManager
             return Optional.empty();
         }
         return Optional.of( new SchedulerInfo().setKey( key )
-                                               .setJobType( jobType )
                                                .setJobName( jobName )
+                                               .setJobType( jobType )
                                                .setPayload( payload )
                                                .setTimeoutSeconds( schedule.getLifespan().intValue() ) );
     }

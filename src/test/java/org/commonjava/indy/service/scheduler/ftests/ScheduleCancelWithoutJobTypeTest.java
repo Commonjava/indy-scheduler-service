@@ -20,7 +20,6 @@ import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import org.commonjava.indy.service.scheduler.ftests.profile.ISPNFunctionProfile;
 import org.commonjava.indy.service.scheduler.jaxrs.SchedulerInfo;
-import org.commonjava.indy.service.scheduler.ftests.matchers.SchedulerInfoMatcher;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
@@ -29,14 +28,13 @@ import java.util.Collections;
 import static io.restassured.RestAssured.given;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.Response.Status.CREATED;
-import static javax.ws.rs.core.Response.Status.NOT_FOUND;
-import static javax.ws.rs.core.Response.Status.OK;
+import static javax.ws.rs.core.Response.Status.NO_CONTENT;
 import static org.commonjava.indy.service.scheduler.testutil.TestUtil.prepareCustomizedMapper;
 
 @QuarkusTest
 @TestProfile( ISPNFunctionProfile.class )
 @Tag( "function" )
-public class ScheduleRetrieveTest
+public class ScheduleCancelWithoutJobTypeTest
         extends AbstractSchedulerTest
 {
     protected final ObjectMapper mapper = prepareCustomizedMapper();
@@ -48,31 +46,21 @@ public class ScheduleRetrieveTest
         final String name = newName();
         final SchedulerInfo info = new SchedulerInfo();
         info.setKey( "testKey" );
-        info.setJobType( "testType" );
         info.setJobName( name );
         info.setPayload( Collections.singletonMap( "payload1", "payloadVal1" ) );
         info.setTimeoutSeconds( 30 );
         final String json = mapper.writeValueAsString( info );
-        //First get and validate not existing
-        given().queryParam( "key", "testKey" )
-               .queryParam( "job_type", "testType" )
-               .queryParam( "job_name", name )
-               .get( API_BASE )
-               .then()
-               .statusCode( NOT_FOUND.getStatusCode() );
-        //Then to create the expiration content
+        //First to create the expiration content
         given().body( json )
                .contentType( APPLICATION_JSON )
                .post( API_BASE )
                .then()
                .statusCode( CREATED.getStatusCode() );
-        //Finally get and validate existing
+        //Then cancel and validate
         given().queryParam( "key", "testKey" )
-               .queryParam( "job_type", "testType" )
                .queryParam( "job_name", name )
-               .get( API_BASE )
+               .delete( API_BASE )
                .then()
-               .statusCode( OK.getStatusCode() )
-               .body( new SchedulerInfoMatcher( mapper, info ) );
+               .statusCode( NO_CONTENT.getStatusCode() );
     }
 }
