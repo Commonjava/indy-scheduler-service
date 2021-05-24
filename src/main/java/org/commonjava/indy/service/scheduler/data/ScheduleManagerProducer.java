@@ -18,6 +18,8 @@ package org.commonjava.indy.service.scheduler.data;
 import org.commonjava.indy.service.scheduler.config.ScheduleConfiguration;
 import org.commonjava.indy.service.scheduler.data.cassandra.CassandraDBScheduleManager;
 import org.commonjava.indy.service.scheduler.data.ispn.ISPNScheduleManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Default;
@@ -27,6 +29,8 @@ import javax.inject.Inject;
 @ApplicationScoped
 public class ScheduleManagerProducer
 {
+    private final Logger logger = LoggerFactory.getLogger( getClass() );
+
     @Inject
     ScheduleConfiguration scheduleConfig;
 
@@ -38,8 +42,10 @@ public class ScheduleManagerProducer
     {
         if ( ScheduleConfiguration.STORAGE_CASSANDRA.equals( scheduleConfig.getStorageType() ) )
         {
+            logger.info( "Using Cassandra DB Schedule Manager for job scheduling." );
             return cassandraManager;
         }
+        logger.info( "Using Infinispan Schedule Manager for job scheduling." );
         return ispnManager;
     }
 

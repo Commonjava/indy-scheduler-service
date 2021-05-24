@@ -30,14 +30,14 @@ public class ScheduleConfiguration
 
     public static final String STORAGE_CASSANDRA = "cassandra";
 
-    private static final String CLUSTER_LOCK_EXPIRATION = "schedule.cluster.lock.expiration.sec";
+    private static final String CLUSTER_LOCK_EXPIRATION = "scheduler.cluster.lock.expiration.sec";
 
     @Inject
     @ConfigProperty( name = CLUSTER_LOCK_EXPIRATION, defaultValue = "3600" )
     Integer clusterLockExpiration;
 
     @Inject
-    @ConfigProperty( name = "schedule.data-storage" )
+    @ConfigProperty( name = "scheduler.data-storage" )
     Optional<String> storageType;
 
 
