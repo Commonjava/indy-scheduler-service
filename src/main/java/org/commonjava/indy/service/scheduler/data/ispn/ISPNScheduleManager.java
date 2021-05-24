@@ -18,6 +18,7 @@ package org.commonjava.indy.service.scheduler.data.ispn;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.quarkus.runtime.Startup;
+import org.commonjava.indy.service.scheduler.config.ScheduleConfiguration;
 import org.commonjava.indy.service.scheduler.data.ScheduleManager;
 import org.commonjava.indy.service.scheduler.data.StandaloneScheduleManager;
 import org.commonjava.indy.service.scheduler.data.ispn.local.CacheHandle;
@@ -98,6 +99,9 @@ public class ISPNScheduleManager
 
     @Inject
     KafkaEventUtils kafkaEvent;
+
+    @Inject
+    ScheduleConfiguration scheduleConfig;
 
     @PostConstruct
     public void init()
@@ -423,9 +427,7 @@ public class ISPNScheduleManager
 
     private Boolean isEnabled()
     {
-        //        return schedulerConfig.isCassandraEnabled();
-        //TODO: need this isEnabled method?
-        return true;
+        return !scheduleConfig.isClusterEnabled();
     }
 
     @Deprecated
