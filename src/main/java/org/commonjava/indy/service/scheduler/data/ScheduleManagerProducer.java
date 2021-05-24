@@ -40,7 +40,7 @@ public class ScheduleManagerProducer
     public ScheduleManager produces( @StandaloneScheduleManager ISPNScheduleManager ispnManager,
                                      @ClusterScheduleManager CassandraDBScheduleManager cassandraManager )
     {
-        if ( ScheduleConfiguration.STORAGE_CASSANDRA.equals( scheduleConfig.getStorageType() ) )
+        if ( scheduleConfig.isClusterEnabled() )
         {
             logger.info( "Using Cassandra DB Schedule Manager for job scheduling." );
             return cassandraManager;

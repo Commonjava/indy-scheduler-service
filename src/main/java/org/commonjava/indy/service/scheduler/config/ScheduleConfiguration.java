@@ -62,6 +62,9 @@ public class ScheduleConfiguration
         this.storageType = Optional.of( storageType );
     }
 
-
+    public boolean isClusterEnabled()
+    {
+        return ScheduleConfiguration.STORAGE_CASSANDRA.equals( this.getStorageType() );
+    }
 
 }
