@@ -38,3 +38,12 @@ services:
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+
+  infinispan:
+    image: infinispan/server:11.0.9.Final-1
+    ports:
+      - "11222:11222"
+    environment:
+      USER: "testuser"
+      PASS: "testpassword"
+

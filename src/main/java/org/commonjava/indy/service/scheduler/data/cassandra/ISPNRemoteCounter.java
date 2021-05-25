@@ -83,7 +83,7 @@ public class ISPNRemoteCounter
         remoteCacheManager = new RemoteCacheManager( builder.build() );
         remoteCacheManager.start();
 
-        logger.info( "Infinispan remote cache manager started." );
+        logger.info( "Infinispan remote counter started." );
     }
 
     public synchronized StrongCounter getStrongCounter( String counter )

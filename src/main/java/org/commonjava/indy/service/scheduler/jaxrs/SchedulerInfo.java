@@ -32,6 +32,7 @@ import static org.apache.commons.lang3.StringUtils.isNotBlank;
 
 public class SchedulerInfo
 {
+    @JsonIgnore
     private final Logger logger = LoggerFactory.getLogger( this.getClass() );
 
     @JsonProperty( "key" )
@@ -52,14 +53,14 @@ public class SchedulerInfo
     @JsonIgnore
     private transient ScheduleManager scheduleManager;
 
-    @JsonIgnore
-    private transient ScheduleKey scheduleKey;
-
-    public SchedulerInfo buildKey()
-    {
-        this.scheduleKey = new ScheduleKey( this.getKey(), this.getJobType(), this.jobName );
-        return this;
-    }
+//    @JsonIgnore
+//    private transient ScheduleKey scheduleKey;
+//
+//    public SchedulerInfo buildKey()
+//    {
+//        this.scheduleKey = new ScheduleKey( this.getKey(), this.getJobType(), this.jobName );
+//        return this;
+//    }
 
     public SchedulerInfo setScheduleManager( final ScheduleManager scheduleManager )
     {
