@@ -9,7 +9,9 @@ import com.datastax.driver.core.querybuilder.BuiltStatement;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.mapping.Mapper;
 import com.datastax.driver.mapping.MappingManager;
+import io.quarkus.runtime.Startup;
 import org.commonjava.indy.service.scheduler.config.CassandraConfiguration;
+import org.commonjava.indy.service.scheduler.config.ScheduleConfiguration;
 import org.commonjava.indy.service.scheduler.event.ScheduleTriggerEvent;
 import org.commonjava.indy.service.scheduler.event.kafka.KafkaEventUtils;
 import org.commonjava.indy.service.scheduler.model.cassandra.DtxExpiration;
@@ -36,8 +38,11 @@ import java.util.concurrent.atomic.AtomicLong;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
 
 @ApplicationScoped
+@Startup
 public class ScheduleDB
 {
+    private final Logger logger = LoggerFactory.getLogger( getClass() );
+
     @Inject
     CassandraClient client;
 
@@ -45,15 +50,13 @@ public class ScheduleDB
     CassandraConfiguration cassandraConfig;
 
     @Inject
-    ISPNRemoteCounter cacheProducer;
+    ScheduleConfiguration scheduleConfig;
 
-    //    @Inject
-    //    Event<ScheduleTriggerEvent> eventDispatcher;
+    @Inject
+    ISPNRemoteCounter remoteCounter;
 
     @Inject
     KafkaEventUtils kafkaDispatcher;
-
-    private final Logger logger = LoggerFactory.getLogger( this.getClass() );
 
     private Session session;
 
@@ -82,14 +85,23 @@ public class ScheduleDB
     public ScheduleDB( CassandraClient client, ISPNRemoteCounter cacheProducer )
     {
         this.client = client;
-        this.cacheProducer = cacheProducer;
+        this.remoteCounter = cacheProducer;
         init();
     }
 
     @PostConstruct
     public void init()
     {
+        if ( scheduleConfig.isClusterEnabled() && cassandraConfig.isEnabled() )
+        {
+            logger.info( "Cluster enabled. Cassandra DB initialization started." );
+            initCassandra();
+            initSchedulingService();
+        }
+    }
 
+    private void initCassandra()
+    {
         final String keyspace = cassandraConfig.getScheduleKeyspace();
 
         session = client.getSession( keyspace );
@@ -126,9 +138,12 @@ public class ScheduleDB
         preparedScheduleByStoreKeyQuery = session.prepare(
                 "SELECT storekey, jobtype, jobname, scheduletime, scheduleuid, payload, lifespan, expired FROM "
                         + keyspace + "." + ScheduleDBUtil.TABLE_SCHEDULE + " WHERE storekey = ? " );
+    }
 
-        StrongCounter remoteCounter = cacheProducer.getStrongCounter( "scheduleCounter" );
-        AtomicLong localCounter = new AtomicLong( 0 );
+    private void initSchedulingService()
+    {
+        final StrongCounter remoteCounter = this.remoteCounter.getStrongCounter( "scheduleCounter" );
+        final AtomicLong localCounter = new AtomicLong( 0 );
         if ( remoteCounter != null )
         {
             try

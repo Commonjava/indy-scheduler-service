@@ -77,18 +77,18 @@ cassandra:
   keyspaceReplicas: 3
   replicaFactor: 3
   partition:
-    range: 0
+    range: 1
   rate:
-    period: 0
+    period: 60
   hours:
     offset: 0
 
 ispn:
   remote:
     enabled: true
-#    hotrod:
-#      client:
-#        config: /deployment/config/hotrod-client.properties
+    hotrod:
+      client:
+        config: /tmp/indy-scheduler-service/config/hotrod-client.properties
 
 
 
@@ -129,7 +129,7 @@ ispn:
            max-backup-index: 5
            max-file-size: 10M
 
-   repository:
+   scheduler:
      data-storage: infinispan
 
    ispn:

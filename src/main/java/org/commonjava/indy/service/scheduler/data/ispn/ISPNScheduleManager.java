@@ -108,7 +108,7 @@ public class ISPNScheduleManager
     {
         if ( !isEnabled() )
         {
-            logger.info( "Scheduler disabled. Skipping initialization" );
+            logger.info( "Infinispan scheduler disabled. Skipping initialization" );
             return;
         }
 
@@ -121,7 +121,6 @@ public class ISPNScheduleManager
     {
         if ( !isEnabled() )
         {
-            logger.debug( "Scheduler disabled." );
             return;
         }
 
@@ -175,7 +174,6 @@ public class ISPNScheduleManager
     {
         if ( !isEnabled() )
         {
-            logger.debug( "Scheduler disabled." );
             return;
         }
 
@@ -205,7 +203,6 @@ public class ISPNScheduleManager
     {
         if ( !isEnabled() )
         {
-            logger.debug( "Scheduler disabled." );
             return empty();
         }
         final ScheduleKey scheduleKey = new ScheduleKey( key, jobType, jobName );
@@ -231,7 +228,6 @@ public class ISPNScheduleManager
     {
         if ( !isEnabled() )
         {
-            logger.debug( "Scheduler disabled." );
             return null;
         }
 
@@ -249,7 +245,6 @@ public class ISPNScheduleManager
     {
         if ( !isEnabled() )
         {
-            logger.debug( "Scheduler disabled." );
             return null;
         }
 
@@ -310,7 +305,6 @@ public class ISPNScheduleManager
     {
         if ( !isEnabled() )
         {
-            logger.debug( "Scheduler disabled." );
             return null;
         }
 
@@ -427,7 +421,12 @@ public class ISPNScheduleManager
 
     private Boolean isEnabled()
     {
-        return !scheduleConfig.isClusterEnabled();
+        if ( scheduleConfig.isClusterEnabled() )
+        {
+            logger.debug( "Infinispan Scheduler disabled." );
+            return false;
+        }
+        return true;
     }
 
     @Deprecated
@@ -436,7 +435,6 @@ public class ISPNScheduleManager
     {
         if ( !isEnabled() )
         {
-            logger.debug( "Scheduler disabled." );
             return Collections.emptySet();
         }
 
@@ -481,7 +479,6 @@ public class ISPNScheduleManager
     {
         if ( !isEnabled() )
         {
-            logger.debug( "Scheduler disabled." );
             return Collections.emptySet();
         }
 
