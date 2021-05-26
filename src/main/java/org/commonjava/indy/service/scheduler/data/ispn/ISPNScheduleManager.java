@@ -22,6 +22,8 @@ import org.commonjava.indy.service.scheduler.config.ScheduleConfiguration;
 import org.commonjava.indy.service.scheduler.data.ScheduleManager;
 import org.commonjava.indy.service.scheduler.data.StandaloneScheduleManager;
 import org.commonjava.indy.service.scheduler.data.ispn.local.CacheHandle;
+import org.commonjava.indy.service.scheduler.event.ScheduleCancelEvent;
+import org.commonjava.indy.service.scheduler.event.ScheduleCreateEvent;
 import org.commonjava.indy.service.scheduler.event.ScheduleTriggerEvent;
 import org.commonjava.indy.service.scheduler.event.kafka.KafkaEventUtils;
 import org.commonjava.indy.service.scheduler.exception.SchedulerException;
@@ -161,10 +163,8 @@ public class ISPNScheduleManager
             throw new RuntimeException(
                     String.format( "Cannot get payload for scheduler info. Key: %s, JobName: %s", key, jobName ), e );
         }
-        return Optional.of( new SchedulerInfo().setKey( key )
-                                               .setJobType( jobType )
-                                               .setJobName( jobName )
-                                               .setPayload( payload ) );
+        return Optional.of(
+                new SchedulerInfo().setKey( key ).setJobType( jobType ).setJobName( jobName ).setPayload( payload ) );
     }
 
     @Override
@@ -179,9 +179,11 @@ public class ISPNScheduleManager
 
         final Map<String, Object> dataMap = new HashMap<>( 3 );
         dataMap.put( JOB_TYPE, jobType );
+        final String payloadStr;
         try
         {
-            dataMap.put( PAYLOAD, objectMapper.writeValueAsString( payload ) );
+            payloadStr = objectMapper.writeValueAsString( payload );
+            dataMap.put( PAYLOAD, payloadStr );
         }
         catch ( final JsonProcessingException e )
         {
@@ -195,6 +197,7 @@ public class ISPNScheduleManager
         final ScheduleValue val = new ScheduleValue( cacheKey, dataMap );
         val.setTimeoutSeconds( timeoutInSecs );
         scheduleCache.execute( cache -> cache.put( cacheKey, val, timeoutInSecs, TimeUnit.SECONDS ) );
+        kafkaEvent.fireEvent( new ScheduleCreateEvent( jobType, jobName, payloadStr ) );
         logger.debug( "Scheduled for the key {} with timeout: {} seconds", cacheKey, timeoutInSecs );
     }
 
@@ -206,7 +209,14 @@ public class ISPNScheduleManager
             return empty();
         }
         final ScheduleKey scheduleKey = new ScheduleKey( key, jobType, jobName );
-        return removeCache( scheduleKey ) == null ? empty() : of( scheduleKey );
+        final ScheduleValue removed = removeCache( scheduleKey );
+        if ( removed == null )
+        {
+            logger.info( "No entry for {}, nothing removed", scheduleKey );
+            return empty();
+        }
+        kafkaEvent.fireEvent( new ScheduleCancelEvent( jobType, jobName, "" ) );
+        return of( scheduleKey );
     }
 
     @Override

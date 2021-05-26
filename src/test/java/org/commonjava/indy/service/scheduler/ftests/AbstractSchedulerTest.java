@@ -15,7 +15,16 @@
  */
 package org.commonjava.indy.service.scheduler.ftests;
 
+import org.commonjava.indy.service.scheduler.event.ScheduleEvent;
+import org.commonjava.indy.service.scheduler.event.ScheduleEventType;
+import org.eclipse.microprofile.reactive.messaging.Message;
+
+import java.util.List;
 import java.util.Random;
+
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThan;
 
 public abstract class AbstractSchedulerTest
 {
@@ -35,5 +44,25 @@ public abstract class AbstractSchedulerTest
         }
 
         return sb.toString();
+    }
+
+    protected void assertEvents( List<? extends Message<ScheduleEvent>> events, final String name,
+                                 final ScheduleEventType eventType, final String jobType, final String payload )
+    {
+        assertThat( events.size(), greaterThan( 0 ) );
+        boolean pass = false;
+
+        for ( Message<ScheduleEvent> event : events )
+        {
+            ScheduleEvent scheduleEvent = event.getPayload();
+            if ( scheduleEvent.getEventType() == eventType && jobType.equals( scheduleEvent.getJobType() )
+                    && name.equals( scheduleEvent.getJobName() ) )
+            {
+                pass = true;
+                assertThat( scheduleEvent.getPayload(), is( payload ) );
+                break;
+            }
+        }
+        assertThat( pass, is( true ) );
     }
 }

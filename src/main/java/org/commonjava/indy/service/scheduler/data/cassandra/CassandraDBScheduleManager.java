@@ -21,6 +21,9 @@ import io.quarkus.runtime.Startup;
 import org.commonjava.indy.service.scheduler.config.CassandraConfiguration;
 import org.commonjava.indy.service.scheduler.data.ClusterScheduleManager;
 import org.commonjava.indy.service.scheduler.data.ScheduleManager;
+import org.commonjava.indy.service.scheduler.event.ScheduleCancelEvent;
+import org.commonjava.indy.service.scheduler.event.ScheduleCreateEvent;
+import org.commonjava.indy.service.scheduler.event.kafka.KafkaEventUtils;
 import org.commonjava.indy.service.scheduler.exception.SchedulerException;
 import org.commonjava.indy.service.scheduler.jaxrs.SchedulerInfo;
 import org.commonjava.indy.service.scheduler.model.Expiration;
@@ -43,6 +46,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
 import static org.commonjava.indy.service.scheduler.data.ScheduleManagerUtils.groupName;
 
 /**
@@ -71,6 +76,9 @@ public class CassandraDBScheduleManager
     @Inject
     ScheduleDB scheduleDB;
 
+    @Inject
+    KafkaEventUtils kafkaDispatcher;
+
     @Override
     public void schedule( final String key, final String jobType, final String jobName,
                           final Map<String, Object> payload, final int startSeconds )
@@ -92,6 +100,7 @@ public class CassandraDBScheduleManager
         }
 
         scheduleDB.createSchedule( key, jobType, jobName, payloadStr, (long) startSeconds );
+        kafkaDispatcher.fireEvent( new ScheduleCreateEvent( jobType, jobName, payloadStr ) );
         logger.debug( "Scheduled for the key {} with timeout: {} seconds", key, startSeconds );
     }
 
@@ -100,12 +109,12 @@ public class CassandraDBScheduleManager
     {
         if ( !isEnabled() )
         {
-            return Optional.empty();
+            return empty();
         }
         final DtxSchedule schedule = scheduleDB.querySchedule( key, jobName );
         if ( schedule == null )
         {
-            return Optional.empty();
+            return empty();
         }
         Map<String, Object> payload;
 
@@ -117,13 +126,13 @@ public class CassandraDBScheduleManager
         {
             logger.error( "Can not get payload due to serializaion problem. The original payload string is {}",
                           schedule.getPayload() );
-            return Optional.empty();
+            return empty();
         }
-        return Optional.of( new SchedulerInfo().setKey( key )
-                                               .setJobName( jobName )
-                                               .setJobType( jobType )
-                                               .setPayload( payload )
-                                               .setTimeoutSeconds( schedule.getLifespan().intValue() ) );
+        return of( new SchedulerInfo().setKey( key )
+                                      .setJobName( jobName )
+                                      .setJobType( jobType )
+                                      .setPayload( payload )
+                                      .setTimeoutSeconds( schedule.getLifespan().intValue() ) );
     }
 
     @Override
@@ -131,11 +140,17 @@ public class CassandraDBScheduleManager
     {
         if ( !isEnabled() )
         {
-            return Optional.empty();
+            return empty();
         }
-        return scheduleDB.deleteSchedule( key, jobName ) ?
-                Optional.of( new ScheduleKey( key, jobType, jobName ) ) :
-                Optional.empty();
+        boolean deleted = scheduleDB.deleteSchedule( key, jobName );
+        if ( deleted )
+        {
+            kafkaDispatcher.fireEvent( new ScheduleCancelEvent( jobType, jobName, "" ) );
+            return of( new ScheduleKey( key, jobType, jobName ) );
+        }
+        logger.info( "No entry for {} {}, nothing removed", key, jobName );
+        return empty();
+
     }
 
     @Override

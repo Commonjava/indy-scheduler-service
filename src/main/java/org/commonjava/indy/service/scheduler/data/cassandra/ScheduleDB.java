@@ -159,14 +159,17 @@ public class ScheduleDB
         service.scheduleAtFixedRate( () -> {
             if ( remoteCounter != null )
             {
+                logger.trace( "Thread scheduled task for Cassandra DB scan started." );
                 try
                 {
                     long expect = localCounter.get();
                     long update = localCounter.incrementAndGet();
                     // The compare-and-swap of StrongCounter is successful if the return value is the same as the expected,
-                    // otherwise we think that other indy nodes had executed the schedule checking during this period.
+                    // otherwise we think that other nodes had executed the schedule checking during this period.
                     if ( remoteCounter.compareAndSwap( expect, update ).get() != expect )
                     {
+                        logger.trace(
+                                "Some other nodes are executing task of cassandra DB scan and scheduling. Skip in this node." );
                         localCounter.set( remoteCounter.getValue().get() );
                         return;
                     }
