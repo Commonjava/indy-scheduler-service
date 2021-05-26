@@ -32,7 +32,7 @@ quarkus:
       "org.commonjava.indy.service":
         level: TRACE
     console:
-      enable: true
+      enable: false
     file:
       level: INFO
       enable: true
@@ -45,8 +45,8 @@ quarkus:
   swagger-ui:
     always-include: true
 
-scheduler:
-  data-storage: cassandra
+#scheduler:
+#  data-storage: cassandra
 
 
 kafka:
@@ -67,29 +67,6 @@ mp:
 
 #keycloak:
 #  enabled: false
-
-
-cassandra:
-  enabled: false
-  host: localhost
-  port: 9042
-  user: cassandra
-  pass: cassandra
-  keyspaceReplicas: 3
-  replicaFactor: 3
-  partition:
-    range: 1
-  rate:
-    period: 60
-  hours:
-    offset: 0
-
-ispn:
-  remote:
-    enabled: true
-    hotrod:
-      client:
-        config: /tmp/indy-scheduler-service/config/hotrod-client.properties
 
 
 
@@ -120,10 +97,10 @@ ispn:
          "org.commonjava.indy.service":
            level: TRACE
        console:
-         enable: true
+         enable: false
        file:
          enable: true
-         path: "/tmp/indy-scheduler-service.log"
+         path: "log/indy-scheduler-service.log"
          format: "%d{HH:mm:ss} %-5p [%c{2.}] (%t) %s%e%n"
          rotation:
            max-backup-index: 5

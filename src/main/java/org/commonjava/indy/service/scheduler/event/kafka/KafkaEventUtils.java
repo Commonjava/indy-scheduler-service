@@ -15,7 +15,7 @@
  */
 package org.commonjava.indy.service.scheduler.event.kafka;
 
-import org.commonjava.event.store.IndyStoreEvent;
+import io.smallrye.reactive.messaging.annotations.Broadcast;
 import org.commonjava.indy.service.scheduler.event.ScheduleEvent;
 import org.eclipse.microprofile.reactive.messaging.Channel;
 import org.eclipse.microprofile.reactive.messaging.Emitter;
@@ -34,14 +34,13 @@ public class KafkaEventUtils
 {
     public static final String CHANNEL_STORE = "scheduler-event";
 
-
     private final Logger logger = LoggerFactory.getLogger( KafkaEventUtils.class );
 
     @Channel( CHANNEL_STORE )
     @OnOverflow( value = OnOverflow.Strategy.BUFFER )
+    @Broadcast
     @Inject
     Emitter<ScheduleEvent> eventEmitter;
-
 
     public void fireEvent( ScheduleEvent event )
     {
