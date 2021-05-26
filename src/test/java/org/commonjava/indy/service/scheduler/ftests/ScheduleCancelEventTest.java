@@ -38,18 +38,15 @@ import java.util.List;
 import static io.restassured.RestAssured.given;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.Response.Status.CREATED;
-import static org.commonjava.indy.service.scheduler.data.ScheduleManager.CONTENT_JOB_TYPE;
-import static org.commonjava.indy.service.scheduler.event.ScheduleEventType.CREATE;
-import static org.commonjava.indy.service.scheduler.event.ScheduleEventType.TRIGGER;
+import static javax.ws.rs.core.Response.Status.NO_CONTENT;
+import static org.commonjava.indy.service.scheduler.event.ScheduleEventType.CANCEL;
 import static org.commonjava.indy.service.scheduler.testutil.TestUtil.prepareCustomizedMapper;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThan;
 
 @QuarkusTest
 @TestProfile( ISPNFunctionProfile.class )
 @QuarkusTestResource( KafkaInMemResourceLifecycleManager.class )
 @Tag( "function" )
-public class ScheduleExpirationInMemTest
+public class ScheduleCancelEventTest
         extends AbstractSchedulerTest
 {
     protected final ObjectMapper mapper = prepareCustomizedMapper();
@@ -64,27 +61,29 @@ public class ScheduleExpirationInMemTest
     {
         final String name = newName();
         final SchedulerInfo info = new SchedulerInfo().setKey( "testKey" )
+                                                      .setJobType( "testType" )
                                                       .setJobName( name )
                                                       .setPayload(
                                                               Collections.singletonMap( "payload1", "payloadVal1" ) )
-                                                      .setTimeoutSeconds( 2 );
+                                                      .setTimeoutSeconds( 30 );
         final String json = mapper.writeValueAsString( info );
+        //First to create the expiration content
         given().body( json )
                .contentType( APPLICATION_JSON )
                .post( API_BASE )
                .then()
                .statusCode( CREATED.getStatusCode() );
+        //Then cancel and validate
+        given().queryParam( "key", "testKey" )
+               .queryParam( "job_type", "testType" )
+               .queryParam( "job_name", name )
+               .delete( API_BASE )
+               .then()
+               .statusCode( NO_CONTENT.getStatusCode() );
 
-        final String payloadStr = "{\"payload1\":\"payloadVal1\"}";
-
+        // Finally check the cancel event
         final InMemorySink<ScheduleEvent> eventsChannel = connector.sink( KafkaEventUtils.CHANNEL_STORE );
         List<? extends Message<ScheduleEvent>> events = eventsChannel.received();
-        assertThat( events.size(), greaterThan( 0 ) );
-        assertEvents( events, name, CREATE, CONTENT_JOB_TYPE, payloadStr );
-
-        Thread.sleep( 3000 );
-        events = eventsChannel.received();
-        assertEvents( events, name, TRIGGER, CONTENT_JOB_TYPE, payloadStr );
+        assertEvents( events, name, CANCEL, "testType", "" );
     }
-
 }
