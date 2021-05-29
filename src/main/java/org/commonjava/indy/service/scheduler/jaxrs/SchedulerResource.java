@@ -80,7 +80,7 @@ public class SchedulerResource
     @Produces( APPLICATION_JSON )
     public Uni<Response> schedule( final SchedulerInfo schedulerInfo, final @Context SecurityContext securityContext )
     {
-        return doSchedule( schedulerInfo );
+        return doSchedule( schedulerInfo, true );
     }
 
     @PUT
@@ -88,16 +88,16 @@ public class SchedulerResource
     @Produces( APPLICATION_JSON )
     public Uni<Response> reschedule( final SchedulerInfo schedulerInfo, final @Context SecurityContext securityContext )
     {
-        return doSchedule( schedulerInfo );
+        return doSchedule( schedulerInfo, false );
     }
 
-    private Uni<Response> doSchedule( final SchedulerInfo schedulerInfo )
+    private Uni<Response> doSchedule( final SchedulerInfo schedulerInfo, final boolean isNew )
     {
         Response response;
         try
         {
             controller.schedule( schedulerInfo );
-            response = Response.status( Response.Status.CREATED ).build();
+            response = Response.status( isNew ? Response.Status.CREATED : Response.Status.OK ).build();
         }
         catch ( SchedulerException e )
         {
@@ -127,7 +127,7 @@ public class SchedulerResource
                 response = Response.status( NOT_FOUND ).build();
             }
         }
-        catch ( SchedulerException e )
+        catch ( Exception e )
         {
             response = Response.status( INTERNAL_SERVER_ERROR )
                                .entity( new ErrorResponseInfo( String.valueOf( INTERNAL_SERVER_ERROR.getStatusCode() ),
